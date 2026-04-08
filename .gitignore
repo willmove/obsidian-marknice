@@ -1,3 +1,9 @@
+# local secrets
+.env
+
+# runtime dependencies
 scripts/node_modules/
+
+# generated outputs
 references/*.html
 references/*.json
