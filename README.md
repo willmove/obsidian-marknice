@@ -30,6 +30,9 @@ marknice-wechat/
 ├── LICENSE
 ├── README.md
 ├── SKILL.md
+├── examples/
+│   ├── artifacts/
+│   └── run-*.sh
 ├── references/
 │   └── sample.md
 └── scripts/
@@ -122,7 +125,8 @@ node publish-from-source.js \
 ## 说明
 
 - `.env` 已被忽略，不应该提交到仓库。
-- `references/` 下生成的 HTML / JSON 也被忽略。
+- `examples/artifacts/` 下生成的 HTML / JSON 会被忽略。
+- `references/` 只保留真正的参考输入材料。
 - 这个项目最初是从已删除的本地 skill/workflow 重建出来的，后来又扩展了直接发布微信公众号草稿箱的能力。
 
 ---
@@ -157,6 +161,9 @@ marknice-wechat/
 ├── LICENSE
 ├── README.md
 ├── SKILL.md
+├── examples/
+│   ├── artifacts/
+│   └── run-*.sh
 ├── references/
 │   └── sample.md
 └── scripts/
@@ -249,5 +256,6 @@ node publish-from-source.js \
 ## Notes
 
 - `.env` is intentionally ignored and should never be committed.
-- Generated HTML/JSON under `references/` is also ignored.
+- Generated HTML/JSON under `examples/artifacts/` is ignored.
+- `references/` is kept for actual reference inputs only.
 - This project was rebuilt from a deleted local skill/workflow and then extended with direct WeChat draft publishing support.

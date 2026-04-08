@@ -5,5 +5,7 @@
 scripts/node_modules/
 
 # generated outputs
+examples/artifacts/*.html
+examples/artifacts/*.json
 references/*.html
 references/*.json

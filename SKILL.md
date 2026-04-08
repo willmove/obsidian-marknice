@@ -1,39 +1,42 @@
 ---
 name: marknice-wechat
-description: Convert Markdown and Word (.docx) documents into WeChat public account article formatting HTML using MarkNice-derived rendering and styling.
+description: Convert Markdown, text, or Word (.docx) documents into WeChat Official Account article HTML, apply公众号排版 themes, and optionally publish the result directly into the WeChat Official Account draft box. Use when the task involves WeChat article formatting, Markdown/Docx to 微信公众号 content conversion, styled article HTML generation, or direct draft publishing with APP_ID/APP_SECRET.
 ---
 
 # MarkNice WeChat Skill
 
-Use this skill when the user wants to:
-- convert Markdown into WeChat public account formatted HTML
-- convert Word `.docx` into WeChat public account formatted HTML
-- apply a styled article theme for公众号文章排版
-- generate a local HTML output for later copy/paste into WeChat Official Account editor
-- directly publish converted content into WeChat Official Account draft box
+Use this skill to turn source documents into WeChat Official Account article content.
 
-## Inputs
+## Execute in this order
 
-Accepted input formats:
-- `.md`
-- `.markdown`
-- `.txt`
-- `.docx`
-
-## Themes
-
-Available themes:
-- `default`
-- `simple`
-- `tech`
-- `elegant`
-- `vivid`
-- `minimal`
-- `amber`
+1. Determine the source type:
+   - Markdown: `.md`, `.markdown`, `.txt`
+   - Word: `.docx`
+2. Decide the target workflow:
+   - conversion only
+   - conversion + direct draft publishing
+3. Choose a theme:
+   - `default`
+   - `simple`
+   - `tech`
+   - `elegant`
+   - `vivid`
+   - `minimal`
+   - `amber`
+4. Run the appropriate script.
+5. If publishing to WeChat draft box, ensure `.env` contains valid:
+   - `WECHAT_APP_ID`
+   - `WECHAT_APP_SECRET`
+6. If publishing, provide a usable cover image path for `thumb_media_id` upload.
 
 ## Runtime
 
-The conversion runtime is in `scripts/convert.js` and depends on:
+Core scripts:
+- `scripts/convert.js`: source document -> WeChat HTML
+- `scripts/publish-draft.js`: HTML -> WeChat draft box
+- `scripts/publish-from-source.js`: source document -> convert -> publish draft
+
+Runtime dependencies in `scripts/package.json` include:
 - `marked`
 - `mammoth`
 - `jsdom`
@@ -45,7 +48,7 @@ cd /root/.openclaw/workspace/skills/marknice-wechat/scripts
 npm install
 ```
 
-## Usage
+## Conversion only
 
 ```bash
 node /root/.openclaw/workspace/skills/marknice-wechat/scripts/convert.js \
@@ -56,48 +59,12 @@ node /root/.openclaw/workspace/skills/marknice-wechat/scripts/convert.js \
 ```
 
 Optional flags:
-- `--fragment` only output the article body fragment, useful for direct WeChat editor paste workflows
-- `--summary /path/to/summary.json` write JSON conversion summary to file
+- `--fragment`: output only the article body fragment for manual paste workflows
+- `--summary /path/to/summary.json`: write JSON conversion summary
 
-For docx:
+For `.docx`, use the same command with a `.docx` input path.
 
-```bash
-node /root/.openclaw/workspace/skills/marknice-wechat/scripts/convert.js \
-  --input /path/to/article.docx \
-  --theme elegant \
-  --title "文章标题" \
-  --output /path/to/output/article-wechat.html
-```
-
-## Output
-
-The script writes a standalone HTML file and prints JSON summary to stdout.
-It can also output:
-- fragment-only HTML for direct paste workflows
-- summary JSON file via `--summary`
-- direct WeChat Official Account draft creation via the draft publish script
-
-Example output:
-
-```json
-{
-  "ok": true,
-  "input": "/tmp/a.docx",
-  "output": "/tmp/a-wechat.html",
-  "format": "docx",
-  "theme": "tech",
-  "title": "文章标题",
-  "size": 12345
-}
-```
-
-## Publish to WeChat Draft
-
-If `.env` contains valid:
-- `WECHAT_APP_ID`
-- `WECHAT_APP_SECRET`
-
-then use:
+## Direct draft publishing from generated HTML
 
 ```bash
 node /root/.openclaw/workspace/skills/marknice-wechat/scripts/publish-draft.js \
@@ -109,15 +76,39 @@ node /root/.openclaw/workspace/skills/marknice-wechat/scripts/publish-draft.js \
   --thumb /path/to/cover.png
 ```
 
-The script will:
+This flow will:
 1. fetch `access_token`
-2. upload cover image as permanent material
+2. upload the cover image
 3. create a WeChat draft article
 4. print `thumb_media_id` and `media_id`
 
+## One-shot flow: source document -> draft box
+
+Use this when the user wants the full pipeline in one step:
+
+```bash
+node /root/.openclaw/workspace/skills/marknice-wechat/scripts/publish-from-source.js \
+  --input /path/to/article.md \
+  --title "文章标题" \
+  --theme elegant \
+  --author "作者名" \
+  --digest "摘要" \
+  --thumb /path/to/cover.png \
+  --env /root/.openclaw/workspace/skills/marknice-wechat/.env
+```
+
+## Outputs
+
+The scripts can produce:
+- standalone HTML for browser preview or copy/paste
+- fragment-only HTML for manual editor workflows
+- JSON conversion summaries
+- WeChat draft `media_id` and cover `thumb_media_id`
+
 ## Notes
 
-- This skill now supports both local conversion and direct draft publishing.
-- The output HTML is styled for WeChat Official Account article editor compatibility.
-- If the user wants more themes or stricter Word fidelity, extend `scripts/convert.js` with additional theme presets and parsing rules.
+- Prefer `convert.js` when the user only wants rendering or preview.
+- Prefer `publish-from-source.js` when the user wants direct draft creation.
+- The output HTML is styled for WeChat Official Account editor compatibility.
+- If the user wants more themes or stricter Word fidelity, extend `scripts/convert.js`.
 - Source inspiration and prior implementation basis: `/root/.openclaw/workspace/projects/marknice`
