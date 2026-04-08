@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
 
 function parseArgs(argv) {
   const args = {};
@@ -34,6 +36,21 @@ function loadEnv(envPath) {
   return env;
 }
 
+function mimeFromFilename(filename = '') {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
+}
+
+function extFromMime(mime = '') {
+  if (mime.includes('png')) return '.png';
+  if (mime.includes('webp')) return '.webp';
+  if (mime.includes('gif')) return '.gif';
+  return '.jpg';
+}
+
 async function getAccessToken(appId, appSecret) {
   const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${encodeURIComponent(appId)}&secret=${encodeURIComponent(appSecret)}`;
   const res = await fetch(url);
@@ -42,21 +59,103 @@ async function getAccessToken(appId, appSecret) {
   return json.access_token;
 }
 
-async function uploadThumb(accessToken, imagePath) {
-  const boundary = '----OpenClawWechatSkill' + Date.now();
-  const file = fs.readFileSync(imagePath);
-  const filename = path.basename(imagePath);
-  const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="media"; filename="${filename}"\r\nContent-Type: image/png\r\n\r\n`);
+async function uploadFileMultipart(url, fieldName, filename, mime, buffer) {
+  const boundary = '----OpenClawWechatSkill' + Date.now() + Math.random().toString(16).slice(2);
+  const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"; filename="${filename}"\r\nContent-Type: ${mime}\r\n\r\n`);
   const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
-  const body = Buffer.concat([header, file, footer]);
-  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/material/add_material?access_token=${encodeURIComponent(accessToken)}&type=image`, {
+  const body = Buffer.concat([header, buffer, footer]);
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
     body
   });
   const json = await res.json();
-  if (!res.ok || json.errcode) throw new Error(`uploadThumb failed: ${JSON.stringify(json)}`);
+  if (!res.ok || json.errcode) throw new Error(`multipart upload failed: ${JSON.stringify(json)}`);
+  return json;
+}
+
+async function uploadThumb(accessToken, imagePath) {
+  const file = fs.readFileSync(imagePath);
+  const filename = path.basename(imagePath);
+  const mime = mimeFromFilename(filename);
+  const json = await uploadFileMultipart(
+    `https://api.weixin.qq.com/cgi-bin/material/add_material?access_token=${encodeURIComponent(accessToken)}&type=image`,
+    'media',
+    filename,
+    mime,
+    file
+  );
   return json.media_id;
+}
+
+async function uploadContentImage(accessToken, imagePath) {
+  const file = fs.readFileSync(imagePath);
+  const filename = path.basename(imagePath);
+  const mime = mimeFromFilename(filename);
+  const json = await uploadFileMultipart(
+    `https://api.weixin.qq.com/cgi-bin/media/uploadimg?access_token=${encodeURIComponent(accessToken)}`,
+    'media',
+    filename,
+    mime,
+    file
+  );
+  return json.url;
+}
+
+async function fetchToTempFile(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`fetch image failed: ${url} -> ${res.status}`);
+  const arr = Buffer.from(await res.arrayBuffer());
+  const contentType = res.headers.get('content-type') || 'image/jpeg';
+  const ext = extFromMime(contentType);
+  const tempPath = path.join(os.tmpdir(), `wechat-img-${crypto.randomBytes(8).toString('hex')}${ext}`);
+  fs.writeFileSync(tempPath, arr);
+  return { tempPath, cleanup: () => { try { fs.unlinkSync(tempPath); } catch {} } };
+}
+
+async function rewriteContentImages(accessToken, html) {
+  const imgRegex = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+  const matches = [...html.matchAll(imgRegex)];
+  if (!matches.length) return html;
+
+  let rewritten = html;
+  const cache = new Map();
+
+  for (const match of matches) {
+    const src = match[1];
+    if (!src || cache.has(src)) continue;
+    let temp = null;
+    try {
+      let imagePath = null;
+      if (src.startsWith('http://') || src.startsWith('https://')) {
+        temp = await fetchToTempFile(src);
+        imagePath = temp.tempPath;
+      } else if (src.startsWith('data:image/')) {
+        const m = src.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+        if (!m) continue;
+        const mime = m[1];
+        const ext = extFromMime(mime);
+        const tempPath = path.join(os.tmpdir(), `wechat-inline-${crypto.randomBytes(8).toString('hex')}${ext}`);
+        fs.writeFileSync(tempPath, Buffer.from(m[2], 'base64'));
+        temp = { tempPath, cleanup: () => { try { fs.unlinkSync(tempPath); } catch {} } };
+        imagePath = tempPath;
+      } else {
+        const localPath = path.isAbsolute(src) ? src : path.resolve(path.dirname(process.cwd()), src);
+        if (fs.existsSync(localPath)) imagePath = localPath;
+      }
+
+      if (!imagePath) continue;
+      const wechatUrl = await uploadContentImage(accessToken, imagePath);
+      cache.set(src, wechatUrl);
+    } finally {
+      if (temp) temp.cleanup();
+    }
+  }
+
+  for (const [src, wechatUrl] of cache.entries()) {
+    rewritten = rewritten.split(src).join(wechatUrl);
+  }
+  return rewritten;
 }
 
 async function addDraft(accessToken, article) {
@@ -97,12 +196,13 @@ async function main() {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const token = await getAccessToken(appId, appSecret);
   const thumbMediaId = await uploadThumb(token, thumb);
+  const rewrittenHtml = await rewriteContentImages(token, html);
 
   const article = {
     title,
     author,
     digest,
-    content: html,
+    content: rewrittenHtml,
     thumb_media_id: thumbMediaId,
     need_open_comment: 0,
     only_fans_can_comment: 0
