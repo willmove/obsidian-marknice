@@ -8,6 +8,10 @@ export interface ConvertOptions {
   theme: WechatTheme;
   /** 是否把标题作为 H1 放进正文（公众号标题是单独字段，默认不放） */
   includeTitleInBody: boolean;
+  /** 字号偏移（px），正负皆可 */
+  fontSizeOffset?: number;
+  /** 段距偏移（px），调整块级元素上下外边距 */
+  paraSpacingOffset?: number;
 }
 
 export interface ConvertResult {
@@ -78,13 +82,33 @@ function setStyle(el: Element, style: string): void {
   el.setAttribute('style', style);
 }
 
+/** 按偏移量缩放样式串中的 font-size 与上下 margin（与 Web 版 scaledStyle 同思路） */
+function scaleStyle(style: string, fontOffset: number, spacingOffset: number): string {
+  let s = style;
+  if (fontOffset) {
+    s = s.replace(/font-size:(\d+)px/g, (_m, n: string) => `font-size:${Math.max(Number(n) + fontOffset, 9)}px`);
+  }
+  if (spacingOffset) {
+    // 三值形式 margin:Tpx X Bpx
+    s = s.replace(/margin:(\d+)px ([^ ;]+) (\d+)px/g, (_m, t: string, mid: string, b: string) =>
+      `margin:${Math.max(Number(t) + spacingOffset, 0)}px ${mid} ${Math.max(Number(b) + spacingOffset, 0)}px`
+    );
+    // 两值形式 margin:Tpx X（上下相同）
+    s = s.replace(/margin:(\d+)px ([^ ;]+)(?=;|$)/g, (_m, t: string, mid: string) =>
+      `margin:${Math.max(Number(t) + spacingOffset, 0)}px ${mid}`
+    );
+  }
+  return s;
+}
+
 /**
  * 把 marked 输出的通用 HTML 转成微信编辑器安全的内联样式 HTML。
  * 公众号编辑器会丢弃 <style> 与 class，因此所有视觉信息必须落在 style 属性上。
  */
-function applyThemeStyles(body: HTMLElement, theme: WechatTheme): void {
+function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0, spacingOffset = 0): void {
   const strongColor = theme.strong ?? theme.heading;
   const codeText = theme.codeText ?? theme.text;
+  const st = (css: string): string => scaleStyle(css, fontOffset, spacingOffset);
 
   body.querySelectorAll('script,style,link,meta,iframe').forEach((el) => el.remove());
 
@@ -105,33 +129,33 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme): void {
   body.querySelectorAll('p').forEach((p) => {
     setStyle(
       p,
-      `margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`
+      st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`)
     );
   });
 
   body.querySelectorAll('h1').forEach((el) => {
     setStyle(
       el,
-      `margin:28px 0 18px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:24px;line-height:1.4;color:${theme.heading};font-weight:700;`
+      st(`margin:28px 0 18px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:24px;line-height:1.4;color:${theme.heading};font-weight:700;`)
     );
   });
   body.querySelectorAll('h2').forEach((el) => {
     setStyle(
       el,
-      `margin:24px 0 14px;padding-left:10px;border-left:4px solid ${theme.accent};font-size:21px;line-height:1.45;color:${theme.heading};font-weight:700;`
+      st(`margin:24px 0 14px;padding-left:10px;border-left:4px solid ${theme.accent};font-size:21px;line-height:1.45;color:${theme.heading};font-weight:700;`)
     );
   });
   body.querySelectorAll('h3').forEach((el) => {
-    setStyle(el, `margin:20px 0 12px;font-size:18px;line-height:1.5;color:${theme.heading};font-weight:700;`);
+    setStyle(el, st(`margin:20px 0 12px;font-size:18px;line-height:1.5;color:${theme.heading};font-weight:700;`));
   });
   body.querySelectorAll('h4,h5,h6').forEach((el) => {
-    setStyle(el, `margin:18px 0 10px;font-size:17px;line-height:1.6;color:${theme.heading};font-weight:600;`);
+    setStyle(el, st(`margin:18px 0 10px;font-size:17px;line-height:1.6;color:${theme.heading};font-weight:600;`));
   });
 
   body.querySelectorAll('blockquote').forEach((el) => {
     setStyle(
       el,
-      `margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`
+      st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
     );
   });
 
@@ -149,7 +173,7 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme): void {
     el.querySelectorAll(':scope > li > p').forEach((p) => {
       p.outerHTML = p.innerHTML;
     });
-    setStyle(el, `margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`);
+    setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
   });
   body.querySelectorAll('li').forEach((el) => {
     const text = (el.textContent ?? '').replace(/ /g, ' ').trim();
@@ -160,14 +184,14 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme): void {
     for (const node of Array.from(el.childNodes)) {
       if (node.nodeType === 3 && !(node.textContent ?? '').trim()) node.remove();
     }
-    setStyle(el, `margin:6px 0;font-size:16px;`);
+    setStyle(el, st(`margin:6px 0;font-size:16px;`));
   });
 
   body.querySelectorAll('pre').forEach((el) => {
     const code = el.textContent ?? '';
-    el.outerHTML = `<pre style="margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;">${escapeHtml(
-      code
-    )}</pre>`;
+    el.outerHTML = `<pre style="${st(
+      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;`
+    )}">${escapeHtml(code)}</pre>`;
   });
 
   body.querySelectorAll('code').forEach((el) => {
@@ -198,17 +222,17 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme): void {
   body.querySelectorAll('img').forEach((el) => {
     const alt = el.getAttribute('alt') ?? '';
     const src = el.getAttribute('src') ?? '';
-    el.outerHTML = `<figure style="margin:20px 0;text-align:center;"><img src="${src}" alt="${escapeHtml(
+    el.outerHTML = `<figure style="${st('margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
       alt
     )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" />${
       alt
-        ? `<figcaption style="margin-top:8px;color:#888;font-size:13px;">${escapeHtml(alt)}</figcaption>`
+        ? `<figcaption style="${st('margin-top:8px;color:#888;font-size:13px;')}">${escapeHtml(alt)}</figcaption>`
         : ''
     }</figure>`;
   });
 
   body.querySelectorAll('table').forEach((el) => {
-    setStyle(el, 'width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;');
+    setStyle(el, st('width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;'));
   });
   body.querySelectorAll('th').forEach((el) => {
     setStyle(
@@ -221,7 +245,7 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme): void {
   });
 
   body.querySelectorAll('hr').forEach((el) => {
-    el.outerHTML = `<hr style="border:none;border-top:1px solid ${theme.hr};margin:28px 0;" />`;
+    el.outerHTML = `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`;
   });
 }
 
@@ -294,17 +318,24 @@ export async function convertFileToWechat(
   const doc = new DOMParser().parseFromString(`<body>${rawHtml}</body>`, 'text/html');
   const body = doc.body;
 
-  applyThemeStyles(body, theme);
+  const fontOffset = options.fontSizeOffset ?? 0;
+  const spacingOffset = options.paraSpacingOffset ?? 0;
+  applyThemeStyles(body, theme, fontOffset, spacingOffset);
   const firstImage = await resolveImages(app, body, file.path);
 
   const titleHtml = options.includeTitleInBody
-    ? `<h1 style="margin:0 0 24px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:26px;line-height:1.4;color:${theme.heading};font-weight:700;">${escapeHtml(
-        title
-      )}</h1>`
+    ? `<h1 style="${scaleStyle(
+        `margin:0 0 24px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:26px;line-height:1.4;color:${theme.heading};font-weight:700;`,
+        fontOffset,
+        spacingOffset
+      )}">${escapeHtml(title)}</h1>`
     : '';
 
   const pageBgStyle = theme.pageBg ? `background:${theme.pageBg};padding:24px 20px;border-radius:8px;` : '';
-  const html = `<section style="font-family:${theme.bodyFont};font-size:16px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
+  const html = `<section style="font-family:${theme.bodyFont};font-size:${Math.max(
+    16 + fontOffset,
+    9
+  )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
 
   const plainText = (body.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
 

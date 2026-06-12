@@ -2092,10 +2092,28 @@ function preprocessObsidianSyntax(app, markdown, sourcePath) {
 function setStyle(el, style) {
   el.setAttribute("style", style);
 }
-function applyThemeStyles(body, theme) {
+function scaleStyle(style, fontOffset, spacingOffset) {
+  let s = style;
+  if (fontOffset) {
+    s = s.replace(/font-size:(\d+)px/g, (_m, n) => `font-size:${Math.max(Number(n) + fontOffset, 9)}px`);
+  }
+  if (spacingOffset) {
+    s = s.replace(
+      /margin:(\d+)px ([^ ;]+) (\d+)px/g,
+      (_m, t, mid, b) => `margin:${Math.max(Number(t) + spacingOffset, 0)}px ${mid} ${Math.max(Number(b) + spacingOffset, 0)}px`
+    );
+    s = s.replace(
+      /margin:(\d+)px ([^ ;]+)(?=;|$)/g,
+      (_m, t, mid) => `margin:${Math.max(Number(t) + spacingOffset, 0)}px ${mid}`
+    );
+  }
+  return s;
+}
+function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
   var _a, _b;
   const strongColor = (_a = theme.strong) != null ? _a : theme.heading;
   const codeText = (_b = theme.codeText) != null ? _b : theme.text;
+  const st = (css) => scaleStyle(css, fontOffset, spacingOffset);
   body.querySelectorAll("script,style,link,meta,iframe").forEach((el) => el.remove());
   body.querySelectorAll("blockquote > p:first-child").forEach((p) => {
     var _a2;
@@ -2113,31 +2131,31 @@ function applyThemeStyles(body, theme) {
   body.querySelectorAll("p").forEach((p) => {
     setStyle(
       p,
-      `margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`
+      st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`)
     );
   });
   body.querySelectorAll("h1").forEach((el) => {
     setStyle(
       el,
-      `margin:28px 0 18px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:24px;line-height:1.4;color:${theme.heading};font-weight:700;`
+      st(`margin:28px 0 18px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:24px;line-height:1.4;color:${theme.heading};font-weight:700;`)
     );
   });
   body.querySelectorAll("h2").forEach((el) => {
     setStyle(
       el,
-      `margin:24px 0 14px;padding-left:10px;border-left:4px solid ${theme.accent};font-size:21px;line-height:1.45;color:${theme.heading};font-weight:700;`
+      st(`margin:24px 0 14px;padding-left:10px;border-left:4px solid ${theme.accent};font-size:21px;line-height:1.45;color:${theme.heading};font-weight:700;`)
     );
   });
   body.querySelectorAll("h3").forEach((el) => {
-    setStyle(el, `margin:20px 0 12px;font-size:18px;line-height:1.5;color:${theme.heading};font-weight:700;`);
+    setStyle(el, st(`margin:20px 0 12px;font-size:18px;line-height:1.5;color:${theme.heading};font-weight:700;`));
   });
   body.querySelectorAll("h4,h5,h6").forEach((el) => {
-    setStyle(el, `margin:18px 0 10px;font-size:17px;line-height:1.6;color:${theme.heading};font-weight:600;`);
+    setStyle(el, st(`margin:18px 0 10px;font-size:17px;line-height:1.6;color:${theme.heading};font-weight:600;`));
   });
   body.querySelectorAll("blockquote").forEach((el) => {
     setStyle(
       el,
-      `margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`
+      st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
     );
   });
   body.querySelectorAll('li > input[type="checkbox"]').forEach((input) => {
@@ -2153,7 +2171,7 @@ function applyThemeStyles(body, theme) {
     el.querySelectorAll(":scope > li > p").forEach((p) => {
       p.outerHTML = p.innerHTML;
     });
-    setStyle(el, `margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`);
+    setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
   });
   body.querySelectorAll("li").forEach((el) => {
     var _a2, _b2;
@@ -2165,14 +2183,14 @@ function applyThemeStyles(body, theme) {
     for (const node of Array.from(el.childNodes)) {
       if (node.nodeType === 3 && !((_b2 = node.textContent) != null ? _b2 : "").trim()) node.remove();
     }
-    setStyle(el, `margin:6px 0;font-size:16px;`);
+    setStyle(el, st(`margin:6px 0;font-size:16px;`));
   });
   body.querySelectorAll("pre").forEach((el) => {
     var _a2;
     const code = (_a2 = el.textContent) != null ? _a2 : "";
-    el.outerHTML = `<pre style="margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;">${escapeHtml(
-      code
-    )}</pre>`;
+    el.outerHTML = `<pre style="${st(
+      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;`
+    )}">${escapeHtml(code)}</pre>`;
   });
   body.querySelectorAll("code").forEach((el) => {
     var _a2, _b2;
@@ -2200,12 +2218,12 @@ function applyThemeStyles(body, theme) {
     var _a2, _b2;
     const alt = (_a2 = el.getAttribute("alt")) != null ? _a2 : "";
     const src = (_b2 = el.getAttribute("src")) != null ? _b2 : "";
-    el.outerHTML = `<figure style="margin:20px 0;text-align:center;"><img src="${src}" alt="${escapeHtml(
+    el.outerHTML = `<figure style="${st("margin:20px 0;text-align:center;")}"><img src="${src}" alt="${escapeHtml(
       alt
-    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" />${alt ? `<figcaption style="margin-top:8px;color:#888;font-size:13px;">${escapeHtml(alt)}</figcaption>` : ""}</figure>`;
+    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" />${alt ? `<figcaption style="${st("margin-top:8px;color:#888;font-size:13px;")}">${escapeHtml(alt)}</figcaption>` : ""}</figure>`;
   });
   body.querySelectorAll("table").forEach((el) => {
-    setStyle(el, "width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;");
+    setStyle(el, st("width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;"));
   });
   body.querySelectorAll("th").forEach((el) => {
     setStyle(
@@ -2217,7 +2235,7 @@ function applyThemeStyles(body, theme) {
     setStyle(el, `border:1px solid ${theme.hr};padding:8px 10px;color:${theme.text};`);
   });
   body.querySelectorAll("hr").forEach((el) => {
-    el.outerHTML = `<hr style="border:none;border-top:1px solid ${theme.hr};margin:28px 0;" />`;
+    el.outerHTML = `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`;
   });
 }
 async function resolveImages(app, body, sourcePath) {
@@ -2254,7 +2272,7 @@ async function resolveImages(app, body, sourcePath) {
   return firstImage;
 }
 async function convertFileToWechat(app, file, options2) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e;
   const { theme } = options2;
   const raw = await app.vault.cachedRead(file);
   const cache = app.metadataCache.getFileCache(file);
@@ -2271,14 +2289,21 @@ async function convertFileToWechat(app, file, options2) {
   const rawHtml = marked.parse(markdown);
   const doc = new DOMParser().parseFromString(`<body>${rawHtml}</body>`, "text/html");
   const body = doc.body;
-  applyThemeStyles(body, theme);
+  const fontOffset = (_c = options2.fontSizeOffset) != null ? _c : 0;
+  const spacingOffset = (_d = options2.paraSpacingOffset) != null ? _d : 0;
+  applyThemeStyles(body, theme, fontOffset, spacingOffset);
   const firstImage = await resolveImages(app, body, file.path);
-  const titleHtml = options2.includeTitleInBody ? `<h1 style="margin:0 0 24px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:26px;line-height:1.4;color:${theme.heading};font-weight:700;">${escapeHtml(
-    title
-  )}</h1>` : "";
+  const titleHtml = options2.includeTitleInBody ? `<h1 style="${scaleStyle(
+    `margin:0 0 24px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:26px;line-height:1.4;color:${theme.heading};font-weight:700;`,
+    fontOffset,
+    spacingOffset
+  )}">${escapeHtml(title)}</h1>` : "";
   const pageBgStyle = theme.pageBg ? `background:${theme.pageBg};padding:24px 20px;border-radius:8px;` : "";
-  const html2 = `<section style="font-family:${theme.bodyFont};font-size:16px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
-  const plainText = ((_c = body.textContent) != null ? _c : "").replace(/\n{3,}/g, "\n\n").trim();
+  const html2 = `<section style="font-family:${theme.bodyFont};font-size:${Math.max(
+    16 + fontOffset,
+    9
+  )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
+  const plainText = ((_e = body.textContent) != null ? _e : "").replace(/\n{3,}/g, "\n\n").trim();
   return { html: html2, plainText, title, meta, firstImage };
 }
 
@@ -2395,6 +2420,125 @@ var THEMES = {
     codeBg: "#fffbeb",
     hr: "#fcd34d",
     markBg: "#fef3c7"
+  },
+  edu: {
+    id: "edu",
+    label: "\u6E05\u65B0\u7EFF",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#2f2f2f",
+    heading: "#2e5b1f",
+    accent: "#3f7f2f",
+    strong: "#3f7f2f",
+    quoteBg: "#f6fbef",
+    quoteBorder: "#7abf45",
+    codeBg: "#eef5e7",
+    codeText: "#496e2d",
+    hr: "#dbe8cf",
+    markBg: "#e4f2d3"
+  },
+  news: {
+    id: "news",
+    label: "\u65B0\u95FB\u7EB8",
+    bodyFont: "Georgia,'PingFang SC','Microsoft YaHei',serif",
+    text: "#1f1f1f",
+    heading: "#111111",
+    accent: "#1155cc",
+    quoteBg: "#f8f8f8",
+    quoteBorder: "#999999",
+    codeBg: "#f0f0f0",
+    hr: "#dddddd",
+    markBg: "#fff3b0"
+  },
+  magazine: {
+    id: "magazine",
+    label: "\u6742\u5FD7\u7EA2",
+    bodyFont: "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif",
+    text: "#2f2f33",
+    heading: "#7a1f1f",
+    accent: "#c23a3a",
+    strong: "#992d2d",
+    quoteBg: "#fff3f2",
+    quoteBorder: "#c23a3a",
+    codeBg: "#ffeef0",
+    codeText: "#9c2f3a",
+    hr: "#e8c2c2",
+    markBg: "#ffe0de"
+  },
+  retro: {
+    id: "retro",
+    label: "\u590D\u53E4\u7EB8",
+    bodyFont: "Georgia,'Times New Roman','PingFang SC',serif",
+    text: "#2f261b",
+    heading: "#4a3215",
+    accent: "#8b6a35",
+    strong: "#7a4e14",
+    quoteBg: "#f8f2e8",
+    quoteBorder: "#8b6a35",
+    codeBg: "#f2e7d4",
+    codeText: "#704a1a",
+    hr: "#d7c19a",
+    markBg: "#f0e3cc"
+  },
+  night: {
+    id: "night",
+    label: "\u591C\u7A7A\u84DD",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#d5dbff",
+    heading: "#9ec5ff",
+    accent: "#7de3ff",
+    strong: "#84f0ff",
+    quoteBg: "#171b2f",
+    quoteBorder: "#7c8cff",
+    codeBg: "#23294a",
+    codeText: "#d6e0ff",
+    hr: "#2f3763",
+    markBg: "#1f2a55",
+    pageBg: "#0f1220"
+  },
+  warmred: {
+    id: "warmred",
+    label: "\u6696\u7EA2",
+    bodyFont: "'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#3b2e2a",
+    heading: "#c0392b",
+    accent: "#c0392b",
+    strong: "#c0392b",
+    quoteBg: "#fef5f0",
+    quoteBorder: "#c0392b",
+    codeBg: "#f7ede0",
+    codeText: "#a93226",
+    hr: "#ecdcc8",
+    markBg: "#fde3d7"
+  },
+  purple: {
+    id: "purple",
+    label: "\u68A6\u5E7B\u7D2B",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#333333",
+    heading: "#5a3fa0",
+    accent: "#7c5cfc",
+    strong: "#7c5cfc",
+    quoteBg: "#f5f0ff",
+    quoteBorder: "#b07cfc",
+    codeBg: "#ede8ff",
+    codeText: "#7c5cfc",
+    hr: "#c4a8ff",
+    markBg: "#e9defc"
+  },
+  ocean: {
+    id: "ocean",
+    label: "\u6D77\u76D0\u9752",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#1f3a3d",
+    heading: "#0b4f55",
+    accent: "#0e9594",
+    strong: "#0a7e7d",
+    quoteBg: "#effbfa",
+    quoteBorder: "#0e9594",
+    codeBg: "#e8f6f5",
+    codeText: "#0b6b6a",
+    hr: "#cdeae8",
+    markBg: "#d6f3f1"
   }
 };
 var DEFAULT_THEME_ID = "claude";
@@ -2409,8 +2553,16 @@ var DEFAULT_SETTINGS = {
   appSecret: "",
   defaultTheme: "claude",
   defaultAuthor: "",
-  includeTitleInBody: false
+  includeTitleInBody: false,
+  fontSizeOffset: 0,
+  paraSpacingOffset: 0,
+  previewMode: "phone"
 };
+var FONT_OFFSET_MIN = -6;
+var FONT_OFFSET_MAX = 6;
+var SPACING_OFFSET_MIN = -16;
+var SPACING_OFFSET_MAX = 24;
+var SPACING_OFFSET_STEP = 2;
 var MarkNiceSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -2435,6 +2587,20 @@ var MarkNiceSettingTab = class extends import_obsidian2.PluginSettingTab {
         this.plugin.refreshPreview();
       });
     });
+    new import_obsidian2.Setting(containerEl).setName("\u5B57\u53F7\u8C03\u6574").setDesc("\u5728\u4E3B\u9898\u9ED8\u8BA4\u5B57\u53F7\u57FA\u7840\u4E0A\u6574\u4F53\u589E\u51CF\uFF08px\uFF09\uFF0C\u9884\u89C8\u9762\u677F\u4E2D\u4E5F\u53EF\u968F\u65F6\u8C03\u8282\u3002").addSlider(
+      (slider) => slider.setLimits(FONT_OFFSET_MIN, FONT_OFFSET_MAX, 1).setValue(this.plugin.settings.fontSizeOffset).setDynamicTooltip().onChange(async (value) => {
+        this.plugin.settings.fontSizeOffset = value;
+        await this.plugin.saveSettings();
+        this.plugin.refreshPreview();
+      })
+    );
+    new import_obsidian2.Setting(containerEl).setName("\u6BB5\u8DDD\u8C03\u6574").setDesc("\u8C03\u6574\u6BB5\u843D\u4E0E\u6807\u9898\u7684\u4E0A\u4E0B\u95F4\u8DDD\uFF08px\uFF09\uFF0C\u8BA9\u6587\u7AE0\u66F4\u7D27\u51D1\u6216\u66F4\u758F\u6717\u3002").addSlider(
+      (slider) => slider.setLimits(SPACING_OFFSET_MIN, SPACING_OFFSET_MAX, SPACING_OFFSET_STEP).setValue(this.plugin.settings.paraSpacingOffset).setDynamicTooltip().onChange(async (value) => {
+        this.plugin.settings.paraSpacingOffset = value;
+        await this.plugin.saveSettings();
+        this.plugin.refreshPreview();
+      })
+    );
     new import_obsidian2.Setting(containerEl).setName("\u6B63\u6587\u4E2D\u5305\u542B\u6807\u9898").setDesc("\u5F00\u542F\u540E\u4F1A\u628A\u6807\u9898\u4F5C\u4E3A\u5927\u6807\u9898\u653E\u8FDB\u6B63\u6587\u5F00\u5934\u3002\u516C\u4F17\u53F7\u7684\u6807\u9898\u662F\u5355\u72EC\u5B57\u6BB5\uFF0C\u901A\u5E38\u5EFA\u8BAE\u5173\u95ED\u3002").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.includeTitleInBody).onChange(async (value) => {
         this.plugin.settings.includeTitleInBody = value;
@@ -2520,8 +2686,23 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
     this.makeButton(actions, "send", "\u53D1\u8349\u7A3F", "mn-btn mn-btn-primary", () => {
       if (this.file) void this.plugin.openPublishModal(this.file);
     });
-    const scroller = root.createDiv({ cls: "mn-scroller" });
-    this.paperEl = scroller.createDiv({ cls: "mn-paper" });
+    const adjustBar = header.createDiv({ cls: "mn-adjust-bar" });
+    this.fontSizeLabelEl = this.makeStepper(adjustBar, "\u5B57\u53F7", {
+      onMinus: () => this.changeFontSize(-1),
+      onPlus: () => this.changeFontSize(1),
+      value: this.plugin.settings.fontSizeOffset
+    });
+    this.paraSpacingLabelEl = this.makeStepper(adjustBar, "\u6BB5\u8DDD", {
+      onMinus: () => this.changeParaSpacing(-SPACING_OFFSET_STEP),
+      onPlus: () => this.changeParaSpacing(SPACING_OFFSET_STEP),
+      value: this.plugin.settings.paraSpacingOffset
+    });
+    const modeWrap = adjustBar.createDiv({ cls: "mn-mode-toggle" });
+    this.desktopBtnEl = this.makeModeButton(modeWrap, "monitor", "\u684C\u9762\u9884\u89C8", "desktop");
+    this.phoneBtnEl = this.makeModeButton(modeWrap, "smartphone", "\u624B\u673A\u9884\u89C8", "phone");
+    this.scrollerEl = root.createDiv({ cls: "mn-scroller" });
+    this.paperEl = this.scrollerEl.createDiv({ cls: "mn-paper" });
+    this.applyPreviewMode();
     this.registerEvent(
       this.app.workspace.on("file-open", (file) => {
         if (file && file.extension === "md") {
@@ -2546,12 +2727,67 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
     btn.addEventListener("click", onClick);
     return btn;
   }
+  /** 「label − n +」形式的步进控件，返回数值显示元素 */
+  makeStepper(parent, label, opts) {
+    const wrap = parent.createDiv({ cls: "mn-stepper" });
+    wrap.createSpan({ cls: "mn-stepper-label", text: label });
+    const minus = wrap.createEl("button", { cls: "mn-stepper-btn", text: "\u2212" });
+    minus.setAttr("aria-label", `\u51CF\u5C0F${label}`);
+    const valueEl = wrap.createSpan({ cls: "mn-stepper-value", text: formatOffset(opts.value) });
+    const plus = wrap.createEl("button", { cls: "mn-stepper-btn", text: "+" });
+    plus.setAttr("aria-label", `\u589E\u5927${label}`);
+    minus.addEventListener("click", opts.onMinus);
+    plus.addEventListener("click", opts.onPlus);
+    return valueEl;
+  }
+  makeModeButton(parent, icon, tooltip, mode) {
+    const btn = parent.createEl("button", { cls: "mn-mode-btn" });
+    btn.setAttr("aria-label", tooltip);
+    (0, import_obsidian3.setIcon)(btn, icon);
+    btn.addEventListener("click", async () => {
+      this.plugin.settings.previewMode = mode;
+      await this.plugin.saveSettings();
+      this.applyPreviewMode();
+    });
+    return btn;
+  }
+  async changeFontSize(delta) {
+    const next = Math.min(
+      Math.max(this.plugin.settings.fontSizeOffset + delta, FONT_OFFSET_MIN),
+      FONT_OFFSET_MAX
+    );
+    if (next === this.plugin.settings.fontSizeOffset) return;
+    this.plugin.settings.fontSizeOffset = next;
+    await this.plugin.saveSettings();
+    this.fontSizeLabelEl.setText(formatOffset(next));
+    void this.render();
+  }
+  async changeParaSpacing(delta) {
+    const next = Math.min(
+      Math.max(this.plugin.settings.paraSpacingOffset + delta, SPACING_OFFSET_MIN),
+      SPACING_OFFSET_MAX
+    );
+    if (next === this.plugin.settings.paraSpacingOffset) return;
+    this.plugin.settings.paraSpacingOffset = next;
+    await this.plugin.saveSettings();
+    this.paraSpacingLabelEl.setText(formatOffset(next));
+    void this.render();
+  }
+  applyPreviewMode() {
+    const phone = this.plugin.settings.previewMode === "phone";
+    this.scrollerEl.toggleClass("mn-phone-mode", phone);
+    this.desktopBtnEl.toggleClass("is-active", !phone);
+    this.phoneBtnEl.toggleClass("is-active", phone);
+  }
   setFile(file) {
     this.file = file;
     this.requestRender();
   }
   refresh() {
     this.themeSelectEl.value = this.plugin.settings.defaultTheme;
+    this.fontSizeLabelEl.setText(formatOffset(this.plugin.settings.fontSizeOffset));
+    this.paraSpacingLabelEl.setText(formatOffset(this.plugin.settings.paraSpacingOffset));
+    this.applyPreviewMode();
     this.requestRender();
   }
   async render() {
@@ -2580,6 +2816,9 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
     this.contentEl.empty();
   }
 };
+function formatOffset(value) {
+  return value > 0 ? `+${value}` : String(value);
+}
 
 // src/publish-modal.ts
 var import_obsidian5 = require("obsidian");
@@ -2996,7 +3235,9 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
   async convert(file) {
     return convertFileToWechat(this.app, file, {
       theme: this.getCurrentTheme(),
-      includeTitleInBody: this.settings.includeTitleInBody
+      includeTitleInBody: this.settings.includeTitleInBody,
+      fontSizeOffset: this.settings.fontSizeOffset,
+      paraSpacingOffset: this.settings.paraSpacingOffset
     });
   }
   /** 复制为带格式的剪贴板内容（text/html + text/plain） */

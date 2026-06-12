@@ -1,14 +1,27 @@
 import { ItemView, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import type MarkNicePlugin from './main';
 import { THEMES } from './themes';
+import {
+  FONT_OFFSET_MAX,
+  FONT_OFFSET_MIN,
+  PreviewMode,
+  SPACING_OFFSET_MAX,
+  SPACING_OFFSET_MIN,
+  SPACING_OFFSET_STEP,
+} from './settings';
 
 export const PREVIEW_VIEW_TYPE = 'marknice-wechat-preview';
 
 export class WechatPreviewView extends ItemView {
   private file: TFile | null = null;
+  private scrollerEl!: HTMLElement;
   private paperEl!: HTMLElement;
   private fileNameEl!: HTMLElement;
   private themeSelectEl!: HTMLSelectElement;
+  private fontSizeLabelEl!: HTMLElement;
+  private paraSpacingLabelEl!: HTMLElement;
+  private desktopBtnEl!: HTMLButtonElement;
+  private phoneBtnEl!: HTMLButtonElement;
   private requestRender = debounce(() => void this.render(), 400, true);
 
   constructor(leaf: WorkspaceLeaf, private plugin: MarkNicePlugin) {
@@ -62,9 +75,29 @@ export class WechatPreviewView extends ItemView {
       if (this.file) void this.plugin.openPublishModal(this.file);
     });
 
+    // ---- 第二行：字号 / 段距 / 预览模式 ----
+    const adjustBar = header.createDiv({ cls: 'mn-adjust-bar' });
+
+    this.fontSizeLabelEl = this.makeStepper(adjustBar, '字号', {
+      onMinus: () => this.changeFontSize(-1),
+      onPlus: () => this.changeFontSize(1),
+      value: this.plugin.settings.fontSizeOffset,
+    });
+
+    this.paraSpacingLabelEl = this.makeStepper(adjustBar, '段距', {
+      onMinus: () => this.changeParaSpacing(-SPACING_OFFSET_STEP),
+      onPlus: () => this.changeParaSpacing(SPACING_OFFSET_STEP),
+      value: this.plugin.settings.paraSpacingOffset,
+    });
+
+    const modeWrap = adjustBar.createDiv({ cls: 'mn-mode-toggle' });
+    this.desktopBtnEl = this.makeModeButton(modeWrap, 'monitor', '桌面预览', 'desktop');
+    this.phoneBtnEl = this.makeModeButton(modeWrap, 'smartphone', '手机预览', 'phone');
+
     // ---- 预览纸面 ----
-    const scroller = root.createDiv({ cls: 'mn-scroller' });
-    this.paperEl = scroller.createDiv({ cls: 'mn-paper' });
+    this.scrollerEl = root.createDiv({ cls: 'mn-scroller' });
+    this.paperEl = this.scrollerEl.createDiv({ cls: 'mn-paper' });
+    this.applyPreviewMode();
 
     // 跟随活动文档
     this.registerEvent(
@@ -100,6 +133,72 @@ export class WechatPreviewView extends ItemView {
     return btn;
   }
 
+  /** 「label − n +」形式的步进控件，返回数值显示元素 */
+  private makeStepper(
+    parent: HTMLElement,
+    label: string,
+    opts: { onMinus: () => void; onPlus: () => void; value: number }
+  ): HTMLElement {
+    const wrap = parent.createDiv({ cls: 'mn-stepper' });
+    wrap.createSpan({ cls: 'mn-stepper-label', text: label });
+    const minus = wrap.createEl('button', { cls: 'mn-stepper-btn', text: '−' });
+    minus.setAttr('aria-label', `减小${label}`);
+    const valueEl = wrap.createSpan({ cls: 'mn-stepper-value', text: formatOffset(opts.value) });
+    const plus = wrap.createEl('button', { cls: 'mn-stepper-btn', text: '+' });
+    plus.setAttr('aria-label', `增大${label}`);
+    minus.addEventListener('click', opts.onMinus);
+    plus.addEventListener('click', opts.onPlus);
+    return valueEl;
+  }
+
+  private makeModeButton(
+    parent: HTMLElement,
+    icon: string,
+    tooltip: string,
+    mode: PreviewMode
+  ): HTMLButtonElement {
+    const btn = parent.createEl('button', { cls: 'mn-mode-btn' });
+    btn.setAttr('aria-label', tooltip);
+    setIcon(btn, icon);
+    btn.addEventListener('click', async () => {
+      this.plugin.settings.previewMode = mode;
+      await this.plugin.saveSettings();
+      this.applyPreviewMode();
+    });
+    return btn;
+  }
+
+  private async changeFontSize(delta: number): Promise<void> {
+    const next = Math.min(
+      Math.max(this.plugin.settings.fontSizeOffset + delta, FONT_OFFSET_MIN),
+      FONT_OFFSET_MAX
+    );
+    if (next === this.plugin.settings.fontSizeOffset) return;
+    this.plugin.settings.fontSizeOffset = next;
+    await this.plugin.saveSettings();
+    this.fontSizeLabelEl.setText(formatOffset(next));
+    void this.render();
+  }
+
+  private async changeParaSpacing(delta: number): Promise<void> {
+    const next = Math.min(
+      Math.max(this.plugin.settings.paraSpacingOffset + delta, SPACING_OFFSET_MIN),
+      SPACING_OFFSET_MAX
+    );
+    if (next === this.plugin.settings.paraSpacingOffset) return;
+    this.plugin.settings.paraSpacingOffset = next;
+    await this.plugin.saveSettings();
+    this.paraSpacingLabelEl.setText(formatOffset(next));
+    void this.render();
+  }
+
+  private applyPreviewMode(): void {
+    const phone = this.plugin.settings.previewMode === 'phone';
+    this.scrollerEl.toggleClass('mn-phone-mode', phone);
+    this.desktopBtnEl.toggleClass('is-active', !phone);
+    this.phoneBtnEl.toggleClass('is-active', phone);
+  }
+
   setFile(file: TFile): void {
     this.file = file;
     this.requestRender();
@@ -107,6 +206,9 @@ export class WechatPreviewView extends ItemView {
 
   refresh(): void {
     this.themeSelectEl.value = this.plugin.settings.defaultTheme;
+    this.fontSizeLabelEl.setText(formatOffset(this.plugin.settings.fontSizeOffset));
+    this.paraSpacingLabelEl.setText(formatOffset(this.plugin.settings.paraSpacingOffset));
+    this.applyPreviewMode();
     this.requestRender();
   }
 
@@ -138,4 +240,8 @@ export class WechatPreviewView extends ItemView {
   async onClose(): Promise<void> {
     this.contentEl.empty();
   }
+}
+
+function formatOffset(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
 }

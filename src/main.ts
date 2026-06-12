@@ -73,6 +73,8 @@ export default class MarkNicePlugin extends Plugin {
     return convertFileToWechat(this.app, file, {
       theme: this.getCurrentTheme(),
       includeTitleInBody: this.settings.includeTitleInBody,
+      fontSizeOffset: this.settings.fontSizeOffset,
+      paraSpacingOffset: this.settings.paraSpacingOffset,
     });
   }
 

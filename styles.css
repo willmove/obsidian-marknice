@@ -105,6 +105,97 @@
   gap: 8px;
 }
 
+/* ---------------- 第二行调节栏：字号 / 段距 / 预览模式 ---------------- */
+
+.mn-adjust-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.mn-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mn-stepper-label {
+  font-size: 0.8em;
+  color: var(--mn-ink-soft);
+  margin-right: 2px;
+}
+
+.mn-view button.mn-stepper-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--mn-line);
+  background: var(--mn-ivory-deep);
+  color: var(--mn-ink);
+  font-size: 0.95em;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.mn-view button.mn-stepper-btn:hover {
+  border-color: var(--mn-clay);
+  color: var(--mn-clay);
+}
+
+.mn-stepper-value {
+  min-width: 24px;
+  text-align: center;
+  font-size: 0.82em;
+  font-variant-numeric: tabular-nums;
+  color: var(--mn-ink);
+}
+
+.mn-mode-toggle {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+  border: 1px solid var(--mn-line);
+  border-radius: 8px;
+  background: var(--mn-ivory-deep);
+}
+
+.mn-view button.mn-mode-btn {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mn-ink-soft);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.mn-view button.mn-mode-btn:hover {
+  color: var(--mn-clay);
+}
+
+.mn-view button.mn-mode-btn.is-active {
+  background: var(--mn-clay);
+  color: #fff;
+}
+
+.mn-mode-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ---------------- 按钮 ---------------- */
 
 .mn-btn {
@@ -164,8 +255,9 @@
   padding: 18px 16px 28px;
 }
 
+/* 桌面模式：纸面铺满面板宽度，模拟公众号后台编辑器 */
 .mn-paper {
-  max-width: 480px;
+  max-width: 640px;
   margin: 0 auto;
   background: #ffffff;
   border: 1px solid var(--mn-line);
@@ -176,6 +268,43 @@
 
 .theme-dark .mn-paper {
   border-color: #45423a;
+}
+
+/* 手机模式：375px 手机画框 + 灵动岛刘海 */
+.mn-scroller.mn-phone-mode {
+  background: var(--mn-ivory-deep);
+  padding-top: 24px;
+}
+
+.mn-scroller.mn-phone-mode .mn-paper {
+  width: 375px;
+  max-width: 100%;
+  border-radius: 40px;
+  border: 6px solid #1e293b;
+  box-shadow: 0 0 0 2px #0f172a, 0 20px 60px rgba(0, 0, 0, 0.18);
+  padding: 48px 18px 36px;
+  position: relative;
+}
+
+.mn-scroller.mn-phone-mode .mn-paper::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 24px;
+  background: #1e293b;
+  border-radius: 14px;
+}
+
+.theme-dark .mn-scroller.mn-phone-mode .mn-paper {
+  border-color: #64748b;
+  box-shadow: 0 0 0 2px #475569, 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.theme-dark .mn-scroller.mn-phone-mode .mn-paper::before {
+  background: #64748b;
 }
 
 .mn-empty {

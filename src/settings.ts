@@ -2,12 +2,20 @@ import { App, PluginSettingTab, Setting } from 'obsidian';
 import type MarkNicePlugin from './main';
 import { THEMES } from './themes';
 
+export type PreviewMode = 'desktop' | 'phone';
+
 export interface MarkNiceSettings {
   appId: string;
   appSecret: string;
   defaultTheme: string;
   defaultAuthor: string;
   includeTitleInBody: boolean;
+  /** 字号偏移（px），影响预览、复制与发草稿 */
+  fontSizeOffset: number;
+  /** 段距偏移（px） */
+  paraSpacingOffset: number;
+  /** 预览模式：桌面 / 手机 */
+  previewMode: PreviewMode;
 }
 
 export const DEFAULT_SETTINGS: MarkNiceSettings = {
@@ -16,7 +24,16 @@ export const DEFAULT_SETTINGS: MarkNiceSettings = {
   defaultTheme: 'claude',
   defaultAuthor: '',
   includeTitleInBody: false,
+  fontSizeOffset: 0,
+  paraSpacingOffset: 0,
+  previewMode: 'phone',
 };
+
+export const FONT_OFFSET_MIN = -6;
+export const FONT_OFFSET_MAX = 6;
+export const SPACING_OFFSET_MIN = -16;
+export const SPACING_OFFSET_MAX = 24;
+export const SPACING_OFFSET_STEP = 2;
 
 export class MarkNiceSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: MarkNicePlugin) {
@@ -48,6 +65,36 @@ export class MarkNiceSettingTab extends PluginSettingTab {
           this.plugin.refreshPreview();
         });
       });
+
+    new Setting(containerEl)
+      .setName('字号调整')
+      .setDesc('在主题默认字号基础上整体增减（px），预览面板中也可随时调节。')
+      .addSlider((slider) =>
+        slider
+          .setLimits(FONT_OFFSET_MIN, FONT_OFFSET_MAX, 1)
+          .setValue(this.plugin.settings.fontSizeOffset)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.fontSizeOffset = value;
+            await this.plugin.saveSettings();
+            this.plugin.refreshPreview();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName('段距调整')
+      .setDesc('调整段落与标题的上下间距（px），让文章更紧凑或更疏朗。')
+      .addSlider((slider) =>
+        slider
+          .setLimits(SPACING_OFFSET_MIN, SPACING_OFFSET_MAX, SPACING_OFFSET_STEP)
+          .setValue(this.plugin.settings.paraSpacingOffset)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.paraSpacingOffset = value;
+            await this.plugin.saveSettings();
+            this.plugin.refreshPreview();
+          })
+      );
 
     new Setting(containerEl)
       .setName('正文中包含标题')
