@@ -1,0 +1,306 @@
+/* ========================================================================
+   MarkNice WeChat — Anthropic 风格界面
+   暖米白 + 赤陶色，衬线展示标题，大圆角与柔和描边
+   ======================================================================== */
+
+.mn-view,
+.mn-settings,
+.mn-modal {
+  --mn-ivory: #faf9f5;
+  --mn-ivory-deep: #f0eee6;
+  --mn-ink: #181815;
+  --mn-ink-soft: #6e6a5e;
+  --mn-clay: #d97757;
+  --mn-clay-hover: #c2613f;
+  --mn-line: #e8e6dc;
+  --mn-serif: 'Tiempos Text', Georgia, 'Songti SC', 'Noto Serif SC', serif;
+}
+
+.theme-dark .mn-view,
+.theme-dark .mn-settings,
+.theme-dark .mn-modal {
+  --mn-ivory: #21201c;
+  --mn-ivory-deep: #191814;
+  --mn-ink: #f0eee6;
+  --mn-ink-soft: #a8a394;
+  --mn-line: #38362f;
+}
+
+/* ---------------- 预览视图 ---------------- */
+
+.mn-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background: var(--mn-ivory);
+}
+
+.mn-header {
+  flex: 0 0 auto;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--mn-line);
+  background: var(--mn-ivory);
+}
+
+.mn-header-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.mn-brand {
+  font-family: var(--mn-serif);
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--mn-ink);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.mn-brand::before {
+  content: '✺ ';
+  color: var(--mn-clay);
+}
+
+.mn-filename {
+  font-size: 0.82em;
+  color: var(--mn-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mn-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mn-theme-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mn-theme-label {
+  font-size: 0.8em;
+  color: var(--mn-ink-soft);
+}
+
+.mn-view select.mn-theme-select {
+  background-color: var(--mn-ivory-deep);
+  border: 1px solid var(--mn-line);
+  border-radius: 8px;
+  color: var(--mn-ink);
+  font-size: 0.85em;
+}
+
+.mn-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------------- 按钮 ---------------- */
+
+.mn-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--mn-line);
+  background: var(--mn-ivory-deep);
+  color: var(--mn-ink);
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: none;
+}
+
+.mn-btn:hover {
+  border-color: var(--mn-clay);
+  color: var(--mn-clay);
+  background: var(--mn-ivory);
+}
+
+.mn-btn-primary {
+  background: var(--mn-clay);
+  border-color: var(--mn-clay);
+  color: #fff;
+}
+
+.mn-btn-primary:hover {
+  background: var(--mn-clay-hover);
+  border-color: var(--mn-clay-hover);
+  color: #fff;
+}
+
+.mn-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mn-btn-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mn-btn-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------------- 预览纸面 ---------------- */
+
+.mn-scroller {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 18px 16px 28px;
+}
+
+.mn-paper {
+  max-width: 480px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid var(--mn-line);
+  border-radius: 14px;
+  padding: 28px 22px;
+  box-shadow: 0 1px 2px rgba(24, 24, 21, 0.04), 0 8px 28px rgba(24, 24, 21, 0.06);
+}
+
+.theme-dark .mn-paper {
+  border-color: #45423a;
+}
+
+.mn-empty {
+  text-align: center;
+  color: var(--mn-ink-soft);
+  padding: 48px 12px;
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+.theme-dark .mn-empty {
+  color: #8a8678;
+}
+
+.mn-empty-icon {
+  font-size: 2.2em;
+  color: var(--mn-clay);
+  margin-bottom: 10px;
+}
+
+/* ---------------- 设置页 ---------------- */
+
+.mn-settings-hero {
+  background: linear-gradient(135deg, var(--mn-ivory) 0%, var(--mn-ivory-deep) 100%);
+  border: 1px solid var(--mn-line);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+
+.mn-settings-hero-title {
+  font-family: var(--mn-serif);
+  font-size: 1.5em;
+  font-weight: 600;
+  color: var(--mn-ink);
+}
+
+.mn-settings-hero-title::before {
+  content: '✺ ';
+  color: var(--mn-clay);
+}
+
+.mn-settings-hero-sub {
+  margin-top: 6px;
+  color: var(--mn-ink-soft);
+  font-size: 0.92em;
+}
+
+.mn-settings .mn-wide-input,
+.mn-modal .mn-wide-input {
+  width: 320px;
+  max-width: 100%;
+}
+
+.mn-settings-tip {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--mn-ivory-deep);
+  border: 1px solid var(--mn-line);
+  border-left: 3px solid var(--mn-clay);
+  color: var(--mn-ink-soft);
+  font-size: 0.88em;
+  line-height: 1.7;
+}
+
+.mn-settings-tip strong {
+  color: var(--mn-clay);
+}
+
+/* ---------------- 发布弹窗 ---------------- */
+
+.mn-modal {
+  border-radius: 16px;
+}
+
+.mn-modal .mn-modal-title {
+  font-family: var(--mn-serif);
+  font-size: 1.35em;
+  font-weight: 600;
+  color: var(--mn-ink);
+  margin-bottom: 4px;
+}
+
+.mn-modal .mn-modal-title::before {
+  content: '✺ ';
+  color: var(--mn-clay);
+}
+
+.mn-modal .mn-modal-sub {
+  color: var(--mn-ink-soft);
+  font-size: 0.88em;
+  margin-bottom: 18px;
+}
+
+.mn-cover-preview {
+  margin: 4px 0 8px;
+  min-height: 0;
+}
+
+.mn-cover-preview img {
+  max-width: 240px;
+  max-height: 135px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--mn-line);
+}
+
+.mn-cover-missing {
+  color: var(--mn-clay);
+  font-size: 0.85em;
+}
+
+.mn-publish-status {
+  min-height: 1.6em;
+  margin-top: 10px;
+  color: var(--mn-ink-soft);
+  font-size: 0.88em;
+}
+
+.mn-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--mn-line);
+}

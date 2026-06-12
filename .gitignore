@@ -1,11 +1,8 @@
-# local secrets
+# dependencies
+node_modules/
+
+# local secrets — never commit credentials
 .env
 
-# runtime dependencies
-scripts/node_modules/
-
-# generated outputs
-examples/artifacts/*.html
-examples/artifacts/*.json
-references/*.html
-references/*.json
+# editor/OS noise
+.DS_Store

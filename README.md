@@ -1,261 +1,112 @@
-# marknice-wechat
+# MarkNice WeChat — Obsidian 公众号排版插件
 
 中文 | [English](#english)
 
-一个实用的 AgentSkill 风格项目，用来把 Markdown 和 Word（`.docx`）文档转换成适合微信公众号的文章排版，并支持直接推送到微信公众号草稿箱。
+把 Obsidian 笔记一键变成漂亮的微信公众号文章：**多主题排版 → 实时预览 → 一键复制 / 直接发草稿**。
 
-## 功能特性
+> 本项目由原 OpenClaw Skill（marknice-wechat）重构而来，现在是一个完整的 Obsidian 插件。
 
-- Markdown -> 微信公众号文章 HTML
-- Word（`.docx`）-> 微信公众号文章 HTML
-- 多种主题风格：
-  - `default`
-  - `simple`
-  - `tech`
-  - `elegant`
-  - `vivid`
-  - `minimal`
-  - `amber`
-- 支持输出完整 HTML 或 fragment 片段
-- 支持输出 JSON 转换摘要
-- 支持直接发布到微信公众号草稿箱
-- 支持自动上传封面图用于草稿发布
+## 功能
+
+- **实时预览**：右侧面板按公众号实际效果渲染当前笔记，编辑自动刷新
+- **8 套主题**：Claude 暖陶（Anthropic 风格）、经典蓝、杂志衬线、极客深色、优雅棕、活力红、极简黑白、琥珀橙
+- **一键复制**：所有样式内联写入 `style` 属性，粘贴进公众号编辑器排版不乱
+- **一键发草稿**：直接调用公众号接口创建草稿，自动上传封面与正文图片（本地图、`![[wiki 嵌入]]`、远程图都会转成微信图床链接）
+- **Obsidian 语法友好**：支持 `![[图片嵌入]]`、`[[双链]]`（降级为纯文本）、`==高亮==`、Callout、任务列表、表格、代码块
+
+## 安装
+
+手动安装（暂未上架社区市场）：
+
+1. 在你的库中创建目录 `<vault>/.obsidian/plugins/marknice-wechat/`
+2. 把 `main.js`、`manifest.json`、`styles.css` 三个文件复制进去
+3. 在 Obsidian「设置 → 第三方插件」中启用 **MarkNice WeChat**
+
+从源码构建：
+
+```bash
+npm install
+npm run build   # 产出 main.js
+```
+
+## 使用
+
+### 1. 预览与切换主题
+
+点击左侧栏的 📰 图标，或命令面板执行「**打开公众号排版预览**」。预览面板顶部可随时切换主题。
+
+### 2. 一键复制
+
+预览面板点「复制」，或命令面板执行「**复制为公众号格式**」，然后到公众号编辑器里 `Ctrl/Cmd+V` 直接粘贴。本地图片会内联为 base64，粘贴后由编辑器自动转存。
+
+### 3. 发送到草稿箱
+
+先在「设置 → MarkNice WeChat」填好：
+
+- **WeChat App ID** / **WeChat App Secret**（公众平台 → 设置与开发 → 基本配置）
+
+然后点预览面板的「发草稿」或执行命令「**发送到公众号草稿箱**」。弹窗中确认标题、作者、摘要、封面图（必填，可从库中选图）后发送。流程：获取凭证 → 上传封面 → 逐张上传正文图片 → 创建草稿。
+
+> **注意**
+> - 公众号接口要求把你的出口 IP 加入 **IP 白名单**（公众平台 → 基本配置），否则报错 40164。
+> - 草稿箱 / 素材接口需要 **已认证** 的公众号。
+> - AppSecret 仅保存在本地库的插件数据（`data.json`）中，不会上传。
+
+### Frontmatter 支持
+
+笔记的 frontmatter 字段会自动作为草稿默认值：
+
+```yaml
+---
+title: 文章标题        # 缺省用文件名
+author: 作者名         # 缺省用设置中的默认作者
+digest: 分享卡片摘要    # 缺省截取正文开头
+cover: assets/封面.png # 库内路径或 https 链接，缺省用文中第一张图
+---
+```
 
 ## 项目结构
 
 ```text
-marknice-wechat/
-├── .env.example
-├── .gitignore
-├── LICENSE
-├── README.md
-├── SKILL.md
-├── examples/
-│   ├── artifacts/
-│   └── run-*.sh
-├── references/
-│   └── sample.md
-└── scripts/
-    ├── convert.js
-    ├── package.json
-    ├── publish-draft.js
-    ├── publish-from-source.js
-    └── test-all.sh
+marknice-obsidian/
+├── manifest.json        # 插件清单
+├── main.js              # 构建产物（esbuild 打包）
+├── styles.css           # 界面样式（Anthropic 风格）
+├── src/
+│   ├── main.ts          # 插件入口：命令、视图注册
+│   ├── converter.ts     # Markdown → 公众号内联样式 HTML
+│   ├── themes.ts        # 8 套排版主题
+│   ├── wechat-api.ts    # 公众号接口客户端（token / 上传 / 草稿）
+│   ├── preview-view.ts  # 右侧预览面板
+│   ├── publish-modal.ts # 发草稿弹窗
+│   └── settings.ts      # 设置页
+├── esbuild.config.mjs
+├── tsconfig.json
+└── package.json
 ```
 
-## 环境要求
+## License
 
-- Node.js 18+
-- 如果要发布到草稿箱，需要有效的微信公众号 `APP_ID` 和 `APP_SECRET`
-
-## 安装
-
-```bash
-cd scripts
-npm install
-```
-
-## 转换用法
-
-### Markdown -> 微信文章 HTML
-
-```bash
-node convert.js \
-  --input /path/to/article.md \
-  --theme elegant \
-  --title "我的文章" \
-  --output /path/to/output/article-wechat.html
-```
-
-### DOCX -> 微信文章 HTML
-
-```bash
-node convert.js \
-  --input /path/to/article.docx \
-  --theme tech \
-  --title "我的文章" \
-  --output /path/to/output/article-wechat.html
-```
-
-### Fragment 模式
-
-```bash
-node convert.js \
-  --input /path/to/article.md \
-  --theme amber \
-  --fragment \
-  --summary /path/to/output/summary.json \
-  --output /path/to/output/article-fragment.html
-```
-
-## 发布到微信公众号草稿箱
-
-先基于 `.env.example` 创建本地 `.env` 文件：
-
-```env
-WECHAT_APP_ID=your_app_id
-WECHAT_APP_SECRET=your_app_secret
-```
-
-### 将已生成的 HTML 发布到草稿箱
-
-```bash
-node publish-draft.js \
-  --env /path/to/.env \
-  --html /path/to/article-wechat.html \
-  --title "文章标题" \
-  --author "作者名" \
-  --digest "文章摘要" \
-  --thumb /path/to/cover.png
-```
-
-### 一步完成：源文档 -> 转换 -> 发布草稿
-
-```bash
-node publish-from-source.js \
-  --input /path/to/article.md \
-  --title "文章标题" \
-  --theme elegant \
-  --author "作者名" \
-  --digest "文章摘要" \
-  --thumb /path/to/cover.png \
-  --env /path/to/.env
-```
-
-## 说明
-
-- `.env` 已被忽略，不应该提交到仓库。
-- `examples/artifacts/` 下生成的 HTML / JSON 会被忽略。
-- `references/` 只保留真正的参考输入材料。
-- 这个项目最初是从已删除的本地 skill/workflow 重建出来的，后来又扩展了直接发布微信公众号草稿箱的能力。
+[MIT](LICENSE)
 
 ---
 
 ## English
 
-A practical AgentSkill-style project for converting Markdown and Word (`.docx`) documents into WeChat Official Account article formatting, with optional direct publishing to the WeChat draft box.
+Turn Obsidian notes into polished WeChat Official Account articles: **themed formatting → live preview → one-click copy / direct draft publishing**.
 
-## Features
+### Features
 
-- Markdown -> WeChat article HTML
-- Word (`.docx`) -> WeChat article HTML
-- Multiple themes:
-  - `default`
-  - `simple`
-  - `tech`
-  - `elegant`
-  - `vivid`
-  - `minimal`
-  - `amber`
-- Output full HTML or fragment-only HTML
-- Output JSON conversion summary
-- Direct publish to WeChat Official Account draft box
-- Cover upload for draft publishing
+- **Live preview** panel that renders the active note exactly as it will appear in WeChat, refreshing as you type
+- **8 themes**, including a Claude-inspired warm-clay style
+- **One-click copy** — every style is inlined into `style` attributes, so pasting into the WeChat editor never breaks the layout
+- **Publish to draft box** via the official API: cover and body images (local files, `![[wiki embeds]]`, remote URLs) are uploaded to WeChat hosting automatically
+- Handles Obsidian syntax: image embeds, wikilinks (flattened to text), `==highlight==`, callouts, task lists, tables, code blocks
 
-## Project Structure
+### Install
 
-```text
-marknice-wechat/
-├── .env.example
-├── .gitignore
-├── LICENSE
-├── README.md
-├── SKILL.md
-├── examples/
-│   ├── artifacts/
-│   └── run-*.sh
-├── references/
-│   └── sample.md
-└── scripts/
-    ├── convert.js
-    ├── package.json
-    ├── publish-draft.js
-    ├── publish-from-source.js
-    └── test-all.sh
-```
+Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/marknice-wechat/`, then enable the plugin. To build from source, run `npm install && npm run build`.
 
-## Requirements
+### Setup for publishing
 
-- Node.js 18+
-- A valid WeChat Official Account `APP_ID` and `APP_SECRET` if using draft publishing
-
-## Install
-
-```bash
-cd scripts
-npm install
-```
-
-## Conversion Usage
-
-### Markdown -> WeChat HTML
-
-```bash
-node convert.js \
-  --input /path/to/article.md \
-  --theme elegant \
-  --title "My Article" \
-  --output /path/to/output/article-wechat.html
-```
-
-### DOCX -> WeChat HTML
-
-```bash
-node convert.js \
-  --input /path/to/article.docx \
-  --theme tech \
-  --title "My Article" \
-  --output /path/to/output/article-wechat.html
-```
-
-### Fragment Mode
-
-```bash
-node convert.js \
-  --input /path/to/article.md \
-  --theme amber \
-  --fragment \
-  --summary /path/to/output/summary.json \
-  --output /path/to/output/article-fragment.html
-```
-
-## WeChat Draft Publishing
-
-Create a local `.env` file from `.env.example`:
-
-```env
-WECHAT_APP_ID=your_app_id
-WECHAT_APP_SECRET=your_app_secret
-```
-
-### Publish already-generated HTML to draft box
-
-```bash
-node publish-draft.js \
-  --env /path/to/.env \
-  --html /path/to/article-wechat.html \
-  --title "Article Title" \
-  --author "Author Name" \
-  --digest "Short summary" \
-  --thumb /path/to/cover.png
-```
-
-### One-shot: source document -> conversion -> draft publish
-
-```bash
-node publish-from-source.js \
-  --input /path/to/article.md \
-  --title "Article Title" \
-  --theme elegant \
-  --author "Author Name" \
-  --digest "Short summary" \
-  --thumb /path/to/cover.png \
-  --env /path/to/.env
-```
-
-## Notes
-
-- `.env` is intentionally ignored and should never be committed.
-- Generated HTML/JSON under `examples/artifacts/` is ignored.
-- `references/` is kept for actual reference inputs only.
-- This project was rebuilt from a deleted local skill/workflow and then extended with direct WeChat draft publishing support.
+Enter your **App ID** and **App Secret** in the plugin settings (WeChat MP console → Settings & Development → Basic Configuration). Note that the WeChat API requires your IP to be whitelisted, and the draft/material APIs require a verified account. Frontmatter keys `title`, `author`, `digest`, and `cover` pre-fill the publish dialog.
