@@ -83,7 +83,7 @@ export class PublishModal extends Modal {
           this.cover = v.trim();
           this.updateCoverPreview();
         });
-        text.inputEl.addClass('mn-wide-input mn-cover-input');
+        text.inputEl.addClasses(['mn-wide-input', 'mn-cover-input']);
       })
       .addButton((btn) =>
         btn.setButtonText('选择图片').onClick(() => {

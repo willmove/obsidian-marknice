@@ -3093,7 +3093,7 @@ var PublishModal = class extends import_obsidian5.Modal {
         this.cover = v.trim();
         this.updateCoverPreview();
       });
-      text.inputEl.addClass("mn-wide-input mn-cover-input");
+      text.inputEl.addClasses(["mn-wide-input", "mn-cover-input"]);
     }).addButton(
       (btn) => btn.setButtonText("\u9009\u62E9\u56FE\u7247").onClick(() => {
         new CoverSuggestModal(this.app, (file) => {
