@@ -188,10 +188,16 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   });
 
   body.querySelectorAll('pre').forEach((el) => {
-    const code = el.textContent ?? '';
+    const code = (el.textContent ?? '').replace(/\n+$/, '');
+    // 公众号编辑器会丢弃 white-space:pre-wrap，导致换行被折叠。
+    // 因此显式把换行转成 <br>、空格转成 &nbsp; 以保留代码格式。
+    const codeHtml = escapeHtml(code)
+      .replace(/\t/g, '    ')
+      .replace(/\n/g, '<br>')
+      .replace(/ /g, '&nbsp;');
     el.outerHTML = `<pre style="${st(
-      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;`
-    )}">${escapeHtml(code)}</pre>`;
+      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+    )}">${codeHtml}</pre>`;
   });
 
   body.querySelectorAll('code').forEach((el) => {
@@ -222,13 +228,10 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   body.querySelectorAll('img').forEach((el) => {
     const alt = el.getAttribute('alt') ?? '';
     const src = el.getAttribute('src') ?? '';
+    // 不渲染图片标题（figcaption）：避免文件名等 alt 文本出现在图片下方
     el.outerHTML = `<figure style="${st('margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
       alt
-    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" />${
-      alt
-        ? `<figcaption style="${st('margin-top:8px;color:#888;font-size:13px;')}">${escapeHtml(alt)}</figcaption>`
-        : ''
-    }</figure>`;
+    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`;
   });
 
   body.querySelectorAll('table').forEach((el) => {
@@ -247,6 +250,47 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   body.querySelectorAll('hr').forEach((el) => {
     el.outerHTML = `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`;
   });
+
+  leftAlignReferenceSection(body);
+}
+
+/**
+ * 末尾的「资料来源 / 参考资源 / 参考网址」等小节通常含长网址，
+ * 两端对齐（justify）会把空格拉得很开，因此整段改为左对齐。
+ * 识别到此类标题后，标题及其之后的所有同级内容都按左对齐处理。
+ */
+function leftAlignReferenceSection(body: HTMLElement): void {
+  const refHeadingRe =
+    /^\s*(资料来源|参考资料|参考网址|参考资源|参考文献|参考链接|相关链接|引用来源|延伸阅读|references?|sources?|links?)\s*[:：]?\s*$/i;
+
+  const leftAlign = (el: Element): void => {
+    const s = el.getAttribute('style') ?? '';
+    const next = /text-align:[^;]*;?/.test(s)
+      ? s.replace(/text-align:[^;]*;?/g, 'text-align:left;')
+      : `${s}text-align:left;`;
+    el.setAttribute('style', next);
+  };
+
+  const children = Array.from(body.children);
+  let inRefSection = false;
+  let refLevel = 0;
+  for (const el of children) {
+    const headingMatch = /^h([1-6])$/.exec(el.tagName.toLowerCase());
+    if (headingMatch) {
+      const level = Number(headingMatch[1]);
+      if (!inRefSection && refHeadingRe.test(el.textContent ?? '')) {
+        inRefSection = true;
+        refLevel = level;
+      } else if (inRefSection && level <= refLevel) {
+        // 遇到同级或更高级别的标题，参考小节结束
+        inRefSection = false;
+      }
+    }
+    if (inRefSection) {
+      leftAlign(el);
+      el.querySelectorAll('p,li,td,th,figure').forEach(leftAlign);
+    }
+  }
 }
 
 /** 把库内图片解析为 data URL，并记录文中第一张图 */

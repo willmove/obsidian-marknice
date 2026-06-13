@@ -2187,10 +2187,11 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
   });
   body.querySelectorAll("pre").forEach((el) => {
     var _a2;
-    const code = (_a2 = el.textContent) != null ? _a2 : "";
+    const code = ((_a2 = el.textContent) != null ? _a2 : "").replace(/\n+$/, "");
+    const codeHtml = escapeHtml(code).replace(/\t/g, "    ").replace(/\n/g, "<br>").replace(/ /g, "&nbsp;");
     el.outerHTML = `<pre style="${st(
-      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;`
-    )}">${escapeHtml(code)}</pre>`;
+      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+    )}">${codeHtml}</pre>`;
   });
   body.querySelectorAll("code").forEach((el) => {
     var _a2, _b2;
@@ -2220,7 +2221,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     const src = (_b2 = el.getAttribute("src")) != null ? _b2 : "";
     el.outerHTML = `<figure style="${st("margin:20px 0;text-align:center;")}"><img src="${src}" alt="${escapeHtml(
       alt
-    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" />${alt ? `<figcaption style="${st("margin-top:8px;color:#888;font-size:13px;")}">${escapeHtml(alt)}</figcaption>` : ""}</figure>`;
+    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`;
   });
   body.querySelectorAll("table").forEach((el) => {
     setStyle(el, st("width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;"));
@@ -2237,6 +2238,36 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
   body.querySelectorAll("hr").forEach((el) => {
     el.outerHTML = `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`;
   });
+  leftAlignReferenceSection(body);
+}
+function leftAlignReferenceSection(body) {
+  var _a;
+  const refHeadingRe = /^\s*(资料来源|参考资料|参考网址|参考资源|参考文献|参考链接|相关链接|引用来源|延伸阅读|references?|sources?|links?)\s*[:：]?\s*$/i;
+  const leftAlign = (el) => {
+    var _a2;
+    const s = (_a2 = el.getAttribute("style")) != null ? _a2 : "";
+    const next = /text-align:[^;]*;?/.test(s) ? s.replace(/text-align:[^;]*;?/g, "text-align:left;") : `${s}text-align:left;`;
+    el.setAttribute("style", next);
+  };
+  const children = Array.from(body.children);
+  let inRefSection = false;
+  let refLevel = 0;
+  for (const el of children) {
+    const headingMatch = /^h([1-6])$/.exec(el.tagName.toLowerCase());
+    if (headingMatch) {
+      const level = Number(headingMatch[1]);
+      if (!inRefSection && refHeadingRe.test((_a = el.textContent) != null ? _a : "")) {
+        inRefSection = true;
+        refLevel = level;
+      } else if (inRefSection && level <= refLevel) {
+        inRefSection = false;
+      }
+    }
+    if (inRefSection) {
+      leftAlign(el);
+      el.querySelectorAll("p,li,td,th,figure").forEach(leftAlign);
+    }
+  }
 }
 async function resolveImages(app, body, sourcePath) {
   var _a, _b;
