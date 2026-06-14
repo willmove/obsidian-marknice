@@ -1,6 +1,6 @@
 {
   "name": "marknice-wechat",
-  "version": "1.1.0",
+  "version": "0.5.1",
   "description": "Obsidian plugin: convert Markdown notes into WeChat Official Account layouts, copy with formatting intact, and publish directly to the draft box.",
   "main": "main.js",
   "scripts": {

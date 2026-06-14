@@ -1,0 +1,35 @@
+Subject: Add "MarkNice WeChat" plugin
+
+Add MarkNice WeChat to the community-plugins.json index.
+
+Plugin repo: https://github.com/willmove/obsidian-marknice
+Release 0.5.1: https://github.com/willmove/obsidian-marknice/releases/tag/0.5.1
+
+This entry must be appended to the END of the `community-plugins.json`
+array in `obsidianmd/obsidian-releases`. Paste the object below as the
+last element of the top-level array (separated from the previous entry
+by a comma, no trailing comma).
+
+-------------------------------------------------------------------------------
+
+  {
+    "id": "marknice-wechat",
+    "name": "MarkNice WeChat",
+    "author": "Willmove",
+    "description": "Convert Markdown notes into WeChat Official Account layouts with themes, one-click copy, and direct draft publishing.",
+    "repo": "willmove/obsidian-marknice"
+  }
+
+-------------------------------------------------------------------------------
+
+Submission checklist (Obsidian review requirements):
+
+  [x] Repo contains manifest.json, main.js, styles.css at the root
+  [x] manifest.json has id / name / description / version / minAppVersion
+  [x] GitHub Release 0.5.1 exists with main.js, manifest.json, styles.css attached
+  [x] Release tag (0.5.1) matches manifest.json version exactly — no "v" prefix
+  [x] versions.json lists the minAppVersion for 0.5.1
+  [x] LICENSE (MIT) present
+  [x] README.md describes the plugin and its use
+  [x] id is lowercase kebab-case and unique across the index
+  [x] description is under 250 characters

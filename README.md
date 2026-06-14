@@ -18,7 +18,7 @@
 
 ## 安装
 
-手动安装（暂未上架社区市场）：
+在 Obsidian 社区插件市场搜索 **MarkNice WeChat** 直接安装，或手动安装：
 
 1. 在你的库中创建目录 `<vault>/.obsidian/plugins/marknice-wechat/`
 2. 把 `main.js`、`manifest.json`、`styles.css` 三个文件复制进去
