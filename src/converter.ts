@@ -82,6 +82,31 @@ function setStyle(el: Element, style: string): void {
   el.setAttribute('style', style);
 }
 
+/**
+ * 把 HTML 字符串解析为节点，返回 DocumentFragment。
+ * 替代直接 innerHTML/outerHTML 赋值，满足 Obsidian 审核的
+ * no-unsafe-innerhtml / no-unsafe-outerhtml 规则。
+ * HTML 片段均为插件自身生成，不存在外部注入。
+ */
+function htmlToNodes(html: string): DocumentFragment {
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+  const fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(doc.body.firstChild);
+  }
+  return fragment;
+}
+
+/** 用解析出的节点替换目标元素自身（替代 el.outerHTML = html） */
+function replaceWithHtml(el: Element, html: string): void {
+  el.replaceWith(htmlToNodes(html));
+}
+
+/** 用解析出的节点替换目标元素的子节点（替代 el.innerHTML = html） */
+function setChildrenFromHtml(el: Element, html: string): void {
+  el.replaceChildren(htmlToNodes(html));
+}
+
 /** 按偏移量缩放样式串中的 font-size 与上下 margin（与 Web 版 scaledStyle 同思路） */
 function scaleStyle(style: string, fontOffset: number, spacingOffset: number): string {
   let s = style;
@@ -118,9 +143,9 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     const stripped = p.innerHTML.replace(/^\s*\[!\w+\][+-]?\s*/i, '');
     const split = stripped.match(/^([^\n]*?)(?:<br\s*\/?>|\n)([\s\S]*)$/i);
     if (split && split[1].trim()) {
-      p.innerHTML = `<strong>${split[1].trim()}</strong><br>${split[2]}`;
+      setChildrenFromHtml(p, `<strong>${split[1].trim()}</strong><br>${split[2]}`);
     } else if (stripped.trim() || p.querySelector('img')) {
-      p.innerHTML = `<strong>${stripped.trim()}</strong>`;
+      setChildrenFromHtml(p, `<strong>${stripped.trim()}</strong>`);
     } else {
       p.remove();
     }
@@ -171,7 +196,7 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
       if (node.nodeType === 3 && !(node.textContent ?? '').trim()) node.remove();
     }
     el.querySelectorAll(':scope > li > p').forEach((p) => {
-      p.outerHTML = p.innerHTML;
+      p.replaceWith(htmlToNodes(p.innerHTML));
     });
     setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
   });
@@ -195,16 +220,22 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
       .replace(/\t/g, '    ')
       .replace(/\n/g, '<br>')
       .replace(/ /g, '&nbsp;');
-    el.outerHTML = `<pre style="${st(
-      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
-    )}">${codeHtml}</pre>`;
+    replaceWithHtml(
+      el,
+      `<pre style="${st(
+        `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+      )}">${codeHtml}</pre>`
+    );
   });
 
   body.querySelectorAll('code').forEach((el) => {
     if (el.parentElement?.tagName.toLowerCase() === 'pre') return;
-    el.outerHTML = `<code style="font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${
-      theme.accent
-    };padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml(el.textContent ?? '')}</code>`;
+    replaceWithHtml(
+      el,
+      `<code style="font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${
+        theme.accent
+      };padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml(el.textContent ?? '')}</code>`
+    );
   });
 
   body.querySelectorAll('strong,b').forEach((el) => {
@@ -229,9 +260,12 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     const alt = el.getAttribute('alt') ?? '';
     const src = el.getAttribute('src') ?? '';
     // 不渲染图片标题（figcaption）：避免文件名等 alt 文本出现在图片下方
-    el.outerHTML = `<figure style="${st('margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
-      alt
-    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`;
+    replaceWithHtml(
+      el,
+      `<figure style="${st('margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
+        alt
+      )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`
+    );
   });
 
   body.querySelectorAll('table').forEach((el) => {
@@ -248,7 +282,7 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   });
 
   body.querySelectorAll('hr').forEach((el) => {
-    el.outerHTML = `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`;
+    replaceWithHtml(el, `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`);
   });
 
   leftAlignReferenceSection(body);

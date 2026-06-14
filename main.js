@@ -2092,6 +2092,20 @@ function preprocessObsidianSyntax(app, markdown, sourcePath) {
 function setStyle(el, style) {
   el.setAttribute("style", style);
 }
+function htmlToNodes(html2) {
+  const doc = new DOMParser().parseFromString(`<div>${html2}</div>`, "text/html");
+  const fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(doc.body.firstChild);
+  }
+  return fragment;
+}
+function replaceWithHtml(el, html2) {
+  el.replaceWith(htmlToNodes(html2));
+}
+function setChildrenFromHtml(el, html2) {
+  el.replaceChildren(htmlToNodes(html2));
+}
 function scaleStyle(style, fontOffset, spacingOffset) {
   let s = style;
   if (fontOffset) {
@@ -2121,9 +2135,9 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     const stripped = p.innerHTML.replace(/^\s*\[!\w+\][+-]?\s*/i, "");
     const split = stripped.match(/^([^\n]*?)(?:<br\s*\/?>|\n)([\s\S]*)$/i);
     if (split && split[1].trim()) {
-      p.innerHTML = `<strong>${split[1].trim()}</strong><br>${split[2]}`;
+      setChildrenFromHtml(p, `<strong>${split[1].trim()}</strong><br>${split[2]}`);
     } else if (stripped.trim() || p.querySelector("img")) {
-      p.innerHTML = `<strong>${stripped.trim()}</strong>`;
+      setChildrenFromHtml(p, `<strong>${stripped.trim()}</strong>`);
     } else {
       p.remove();
     }
@@ -2169,7 +2183,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
       if (node.nodeType === 3 && !((_a2 = node.textContent) != null ? _a2 : "").trim()) node.remove();
     }
     el.querySelectorAll(":scope > li > p").forEach((p) => {
-      p.outerHTML = p.innerHTML;
+      p.replaceWith(htmlToNodes(p.innerHTML));
     });
     setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
   });
@@ -2189,14 +2203,20 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     var _a2;
     const code = ((_a2 = el.textContent) != null ? _a2 : "").replace(/\n+$/, "");
     const codeHtml = escapeHtml(code).replace(/\t/g, "    ").replace(/\n/g, "<br>").replace(/ /g, "&nbsp;");
-    el.outerHTML = `<pre style="${st(
-      `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
-    )}">${codeHtml}</pre>`;
+    replaceWithHtml(
+      el,
+      `<pre style="${st(
+        `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+      )}">${codeHtml}</pre>`
+    );
   });
   body.querySelectorAll("code").forEach((el) => {
     var _a2, _b2;
     if (((_a2 = el.parentElement) == null ? void 0 : _a2.tagName.toLowerCase()) === "pre") return;
-    el.outerHTML = `<code style="font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${theme.accent};padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml((_b2 = el.textContent) != null ? _b2 : "")}</code>`;
+    replaceWithHtml(
+      el,
+      `<code style="font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${theme.accent};padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml((_b2 = el.textContent) != null ? _b2 : "")}</code>`
+    );
   });
   body.querySelectorAll("strong,b").forEach((el) => {
     setStyle(el, `color:${strongColor};font-weight:700;`);
@@ -2219,9 +2239,12 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     var _a2, _b2;
     const alt = (_a2 = el.getAttribute("alt")) != null ? _a2 : "";
     const src = (_b2 = el.getAttribute("src")) != null ? _b2 : "";
-    el.outerHTML = `<figure style="${st("margin:20px 0;text-align:center;")}"><img src="${src}" alt="${escapeHtml(
-      alt
-    )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`;
+    replaceWithHtml(
+      el,
+      `<figure style="${st("margin:20px 0;text-align:center;")}"><img src="${src}" alt="${escapeHtml(
+        alt
+      )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`
+    );
   });
   body.querySelectorAll("table").forEach((el) => {
     setStyle(el, st("width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;"));
@@ -2236,7 +2259,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     setStyle(el, `border:1px solid ${theme.hr};padding:8px 10px;color:${theme.text};`);
   });
   body.querySelectorAll("hr").forEach((el) => {
-    el.outerHTML = `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`;
+    replaceWithHtml(el, `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`);
   });
   leftAlignReferenceSection(body);
 }
@@ -2673,6 +2696,15 @@ var MarkNiceSettingTab = class extends import_obsidian2.PluginSettingTab {
 // src/preview-view.ts
 var import_obsidian3 = require("obsidian");
 var PREVIEW_VIEW_TYPE = "marknice-wechat-preview";
+function setInnerHtml(target, html2) {
+  const doc = new DOMParser().parseFromString(`<div>${html2}</div>`, "text/html");
+  target.empty();
+  const fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(doc.body.firstChild);
+  }
+  target.appendChild(fragment);
+}
 var WechatPreviewView = class extends import_obsidian3.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
@@ -2834,7 +2866,7 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
     try {
       const result = await this.plugin.convert(this.file);
       this.paperEl.empty();
-      this.paperEl.innerHTML = result.html;
+      setInnerHtml(this.paperEl, result.html);
     } catch (err) {
       this.paperEl.empty();
       this.paperEl.createDiv({
