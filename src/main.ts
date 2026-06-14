@@ -115,8 +115,11 @@ export default class MarkNicePlugin extends Plugin {
       leaf = this.app.workspace.getRightLeaf(false);
       if (!leaf) return;
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
+    } else {
+      // 面板已存在时，确保它可见（不依赖 revealLeaf，兼容更早版本）。
+      // active: true 会把右侧栏展开并切到该 leaf。
+      await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
-    this.app.workspace.revealLeaf(leaf);
 
     const file = this.getActiveMarkdownFile();
     const view = leaf.view;

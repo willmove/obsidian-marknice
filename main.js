@@ -3340,8 +3340,9 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       leaf = this.app.workspace.getRightLeaf(false);
       if (!leaf) return;
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
+    } else {
+      await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
-    this.app.workspace.revealLeaf(leaf);
     const file = this.getActiveMarkdownFile();
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
