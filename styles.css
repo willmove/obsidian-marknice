@@ -257,6 +257,7 @@
 
 /* 桌面模式：纸面铺满面板宽度，模拟公众号后台编辑器 */
 .mn-paper {
+  box-sizing: border-box;
   max-width: 640px;
   margin: 0 auto;
   background: #ffffff;
@@ -305,6 +306,45 @@
 
 .theme-dark .mn-scroller.mn-phone-mode .mn-paper::before {
   background: #64748b;
+}
+
+@media (max-width: 480px) {
+  .mn-header {
+    padding: 12px 12px 10px;
+  }
+
+  .mn-actions {
+    width: 100%;
+  }
+
+  .mn-actions .mn-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .mn-mode-toggle {
+    margin-left: 0;
+  }
+
+  .mn-scroller {
+    padding: 12px 8px 20px;
+  }
+
+  .mn-paper {
+    padding: 22px 14px;
+    border-radius: 10px;
+  }
+
+  .mn-scroller.mn-phone-mode {
+    padding-top: 14px;
+  }
+
+  .mn-scroller.mn-phone-mode .mn-paper {
+    width: 100%;
+    border-width: 4px;
+    border-radius: 28px;
+    padding: 42px 14px 28px;
+  }
 }
 
 .mn-empty {

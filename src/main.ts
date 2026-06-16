@@ -1,4 +1,4 @@
-import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { MarkdownView, Notice, Platform, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { ConvertResult, convertFileToWechat } from './converter';
 import { DEFAULT_SETTINGS, MarkNiceSettingTab, MarkNiceSettings } from './settings';
 import { PREVIEW_VIEW_TYPE, WechatPreviewView } from './preview-view';
@@ -82,12 +82,23 @@ export default class MarkNicePlugin extends Plugin {
   async copyAsWechat(file: TFile): Promise<void> {
     try {
       const result = await this.convert(file);
-      const item = new ClipboardItem({
-        'text/html': new Blob([result.html], { type: 'text/html' }),
-        'text/plain': new Blob([result.plainText], { type: 'text/plain' }),
-      });
-      await navigator.clipboard.write([item]);
-      new Notice(`✅ 已复制「${result.title}」\n到公众号编辑器中直接粘贴即可，排版保持不变。`, 5000);
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        const item = new ClipboardItem({
+          'text/html': new Blob([result.html], { type: 'text/html' }),
+          'text/plain': new Blob([result.plainText], { type: 'text/plain' }),
+        });
+        await navigator.clipboard.write([item]);
+        new Notice(`✅ 已复制「${result.title}」\n到公众号编辑器中直接粘贴即可，排版保持不变。`, 5000);
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(result.plainText);
+        new Notice('当前移动端系统剪贴板不支持复制富文本，已改为复制纯文本。', 5000);
+        return;
+      }
+
+      throw new Error('当前设备不支持剪贴板写入');
     } catch (err) {
       console.error('[MarkNice WeChat] copy failed', err);
       new Notice(`复制失败：${err instanceof Error ? err.message : String(err)}`);
@@ -112,18 +123,32 @@ export default class MarkNicePlugin extends Plugin {
     const existing = this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE);
     let leaf: WorkspaceLeaf | null = existing[0] ?? null;
     if (!leaf) {
-      leaf = this.app.workspace.getRightLeaf(false);
-      if (!leaf) return;
+      leaf = Platform.isMobile ? this.app.workspace.getLeaf('tab') : this.app.workspace.getRightLeaf(false);
+      if (!leaf) {
+        new Notice('无法打开 MarkNice 预览视图');
+        return;
+      }
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     } else {
-      // 面板已存在时，确保它可见（不依赖 revealLeaf，兼容更早版本）。
-      // active: true 会把右侧栏展开并切到该 leaf。
+      // 面板已存在时，确保它可见。
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
+    await this.revealLeaf(leaf);
 
     const file = this.getActiveMarkdownFile();
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
+  }
+
+  private async revealLeaf(leaf: WorkspaceLeaf): Promise<void> {
+    const workspace = this.app.workspace as typeof this.app.workspace & {
+      revealLeaf?: (leaf: WorkspaceLeaf) => Promise<void>;
+    };
+    if (workspace.revealLeaf) {
+      await workspace.revealLeaf(leaf);
+      return;
+    }
+    this.app.workspace.setActiveLeaf(leaf, false, true);
   }
 
   refreshPreview(): void {

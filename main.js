@@ -3305,15 +3305,25 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
   }
   /** 复制为带格式的剪贴板内容（text/html + text/plain） */
   async copyAsWechat(file) {
+    var _a, _b;
     try {
       const result = await this.convert(file);
-      const item = new ClipboardItem({
-        "text/html": new Blob([result.html], { type: "text/html" }),
-        "text/plain": new Blob([result.plainText], { type: "text/plain" })
-      });
-      await navigator.clipboard.write([item]);
-      new import_obsidian6.Notice(`\u2705 \u5DF2\u590D\u5236\u300C${result.title}\u300D
+      if (typeof ClipboardItem !== "undefined" && ((_a = navigator.clipboard) == null ? void 0 : _a.write)) {
+        const item = new ClipboardItem({
+          "text/html": new Blob([result.html], { type: "text/html" }),
+          "text/plain": new Blob([result.plainText], { type: "text/plain" })
+        });
+        await navigator.clipboard.write([item]);
+        new import_obsidian6.Notice(`\u2705 \u5DF2\u590D\u5236\u300C${result.title}\u300D
 \u5230\u516C\u4F17\u53F7\u7F16\u8F91\u5668\u4E2D\u76F4\u63A5\u7C98\u8D34\u5373\u53EF\uFF0C\u6392\u7248\u4FDD\u6301\u4E0D\u53D8\u3002`, 5e3);
+        return;
+      }
+      if ((_b = navigator.clipboard) == null ? void 0 : _b.writeText) {
+        await navigator.clipboard.writeText(result.plainText);
+        new import_obsidian6.Notice("\u5F53\u524D\u79FB\u52A8\u7AEF\u7CFB\u7EDF\u526A\u8D34\u677F\u4E0D\u652F\u6301\u590D\u5236\u5BCC\u6587\u672C\uFF0C\u5DF2\u6539\u4E3A\u590D\u5236\u7EAF\u6587\u672C\u3002", 5e3);
+        return;
+      }
+      throw new Error("\u5F53\u524D\u8BBE\u5907\u4E0D\u652F\u6301\u526A\u8D34\u677F\u5199\u5165");
     } catch (err) {
       console.error("[MarkNice WeChat] copy failed", err);
       new import_obsidian6.Notice(`\u590D\u5236\u5931\u8D25\uFF1A${err instanceof Error ? err.message : String(err)}`);
@@ -3337,15 +3347,27 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
     const existing = this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE);
     let leaf = (_a = existing[0]) != null ? _a : null;
     if (!leaf) {
-      leaf = this.app.workspace.getRightLeaf(false);
-      if (!leaf) return;
+      leaf = import_obsidian6.Platform.isMobile ? this.app.workspace.getLeaf("tab") : this.app.workspace.getRightLeaf(false);
+      if (!leaf) {
+        new import_obsidian6.Notice("\u65E0\u6CD5\u6253\u5F00 MarkNice \u9884\u89C8\u89C6\u56FE");
+        return;
+      }
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     } else {
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
+    await this.revealLeaf(leaf);
     const file = this.getActiveMarkdownFile();
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
+  }
+  async revealLeaf(leaf) {
+    const workspace = this.app.workspace;
+    if (workspace.revealLeaf) {
+      await workspace.revealLeaf(leaf);
+      return;
+    }
+    this.app.workspace.setActiveLeaf(leaf, false, true);
   }
   refreshPreview() {
     for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE)) {
