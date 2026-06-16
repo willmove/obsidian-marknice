@@ -6,6 +6,16 @@ export interface WechatTheme {
   text: string;
   heading: string;
   accent: string;
+  /** 标题块背景，适合需要强视觉识别的主题 */
+  headingBg?: string;
+  /** 标题块文字颜色，缺省时使用 heading */
+  headingText?: string;
+  /** 标题视觉结构，缺省为普通左边框标题 */
+  headingVariant?: 'ribbon';
+  /** Ribbon 标题右侧斜切尾巴颜色 */
+  headingTailBg?: string;
+  /** Ribbon 标题底线颜色，缺省时使用 accent */
+  headingLine?: string;
   /** 加粗文字颜色，缺省时用 heading */
   strong?: string;
   quoteBg: string;
@@ -18,6 +28,8 @@ export interface WechatTheme {
   markBg?: string;
   /** 整页背景（深色主题需要） */
   pageBg?: string;
+  /** 多层背景的尺寸，缺省时使用浏览器默认值 */
+  pageBgSize?: string;
 }
 
 export const THEMES: Record<string, WechatTheme> = {
@@ -81,23 +93,31 @@ export const THEMES: Record<string, WechatTheme> = {
   elegant: {
     id: 'elegant',
     label: '优雅棕',
-    bodyFont: "'Times New Roman','PingFang SC','Microsoft YaHei',serif",
-    text: '#4a403a',
-    heading: '#2d241f',
-    accent: '#9c6b4f',
-    quoteBg: '#fbf7f3',
-    quoteBorder: '#9c6b4f',
-    codeBg: '#f8f3ee',
-    hr: '#d9c6b8',
-    markBg: '#f3e4d6',
+    bodyFont: "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif",
+    text: '#4a3a30',
+    heading: '#5a3826',
+    accent: '#b08968',
+    strong: '#8a5a36',
+    quoteBg: '#fffaf2',
+    quoteBorder: '#d8b891',
+    codeBg: '#f7efe4',
+    codeText: '#6b4a35',
+    hr: '#eadcc9',
+    markBg: '#f6e6cf',
+    pageBg: '#fff8ee',
   },
   vivid: {
     id: 'vivid',
     label: '活力红',
     bodyFont: "'PingFang SC','Microsoft YaHei',sans-serif",
     text: '#233044',
-    heading: '#0f172a',
+    heading: '#d94841',
     accent: '#ff6b6b',
+    headingBg: '#f1665d',
+    headingText: '#ffffff',
+    headingVariant: 'ribbon',
+    headingTailBg: '#e5e7eb',
+    headingLine: '#ff6b6b',
     strong: '#e05252',
     quoteBg: '#fff4f4',
     quoteBorder: '#ff6b6b',
@@ -147,18 +167,24 @@ export const THEMES: Record<string, WechatTheme> = {
     hr: '#dbe8cf',
     markBg: '#e4f2d3',
   },
-  news: {
-    id: 'news',
-    label: '新闻纸',
-    bodyFont: "Georgia,'PingFang SC','Microsoft YaHei',serif",
-    text: '#1f1f1f',
-    heading: '#111111',
-    accent: '#1155cc',
-    quoteBg: '#f8f8f8',
-    quoteBorder: '#999999',
-    codeBg: '#f0f0f0',
-    hr: '#dddddd',
-    markBg: '#fff3b0',
+  health: {
+    id: 'health',
+    label: '健康绿',
+    bodyFont:
+      "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif",
+    text: '#183d34',
+    heading: '#123f34',
+    accent: '#0f8f67',
+    strong: '#087857',
+    quoteBg: '#f7fcf9',
+    quoteBorder: '#5a8f75',
+    codeBg: '#edf7f2',
+    codeText: '#0f3129',
+    hr: '#dcebe3',
+    markBg: '#e5f5ee',
+    pageBg:
+      'linear-gradient(rgba(18,63,52,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(18,63,52,0.045) 1px,transparent 1px),#f4faf7',
+    pageBgSize: '48px 48px,48px 48px,auto',
   },
   magazine: {
     id: 'magazine',
@@ -206,20 +232,25 @@ export const THEMES: Record<string, WechatTheme> = {
     markBg: '#1f2a55',
     pageBg: '#0f1220',
   },
-  warmred: {
-    id: 'warmred',
-    label: '暖红',
-    bodyFont: "'PingFang SC','Microsoft YaHei',sans-serif",
-    text: '#3b2e2a',
-    heading: '#c0392b',
-    accent: '#c0392b',
-    strong: '#c0392b',
-    quoteBg: '#fef5f0',
-    quoteBorder: '#c0392b',
-    codeBg: '#f7ede0',
-    codeText: '#a93226',
-    hr: '#ecdcc8',
-    markBg: '#fde3d7',
+  'indigo-pink-tech': {
+    id: 'indigo-pink-tech',
+    label: '靛粉科技',
+    bodyFont: "Inter,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: '#334155',
+    heading: '#312e81',
+    accent: '#6366f1',
+    headingBg: 'linear-gradient(135deg,#6366f1,#ec4899)',
+    headingText: '#ffffff',
+    strong: '#ec4899',
+    quoteBg: '#f8f7ff',
+    quoteBorder: '#ec4899',
+    codeBg: '#eef2ff',
+    codeText: '#4338ca',
+    hr: '#e0e7ff',
+    markBg: '#fce7f3',
+    pageBg:
+      'linear-gradient(rgba(99,102,241,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.045) 1px,transparent 1px),radial-gradient(circle at 92% 8%,rgba(236,72,153,0.16) 0 120px,transparent 122px),radial-gradient(circle at 6% 88%,rgba(99,102,241,0.16) 0 140px,transparent 142px),#ffffff',
+    pageBgSize: '40px 40px,40px 40px,auto,auto,auto',
   },
   purple: {
     id: 'purple',
@@ -256,5 +287,5 @@ export const THEMES: Record<string, WechatTheme> = {
 export const DEFAULT_THEME_ID = 'claude';
 
 export function getTheme(id: string): WechatTheme {
-  return THEMES[id] ?? THEMES[DEFAULT_THEME_ID];
+  return THEMES[id] ?? Object.values(THEMES).find((theme) => theme.id === id) ?? THEMES[DEFAULT_THEME_ID];
 }
