@@ -142,8 +142,11 @@ function getMathTex(el: Element, open: RegExp, close: RegExp): string {
 function setChildrenFromHtml(el: Element, html: string): void {
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
   const fragment = el.ownerDocument.createDocumentFragment();
+  // 注意：必须用 appendChild「移动」节点，不能用 importNode「复制」。
+  // importNode 不会从源文档移除节点，会使 while(doc.body.firstChild) 永远为真，
+  // 从而无限复制节点直至内存耗尽（曾导致 Obsidian 在含公式文档上卡死/OOM）。
   while (doc.body.firstChild) {
-    fragment.appendChild(el.ownerDocument.importNode(doc.body.firstChild, true));
+    fragment.appendChild(doc.body.firstChild);
   }
   el.replaceChildren(fragment);
 }
