@@ -1,5 +1,47 @@
+function escapeHtml(str = ''): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeMarkdownText(str = ''): string {
+  return str.replace(/\\/g, '\\\\').replace(/([*_`~[\]|])/g, '\\$1');
+}
+
+function cellText(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  const el = node as Element;
+  const tag = el.tagName.toLowerCase();
+  if (tag === 'br') return '\n';
+
+  const text = Array.from(el.childNodes).map(cellText).join('');
+  if (tag === 'p' || tag === 'div' || tag === 'li') return `${text}\n`;
+  return text;
+}
+
 function textContent(node: Element): string {
-  return (node.textContent ?? '').trim();
+  return cellText(node).trim();
+}
+
+function markdownTableCell(node: Element): string {
+  return cellText(node)
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .filter(Boolean)
+    .map(escapeMarkdownText)
+    .join('<br>');
+}
+
+function rowCells(row: Element): Element[] {
+  return Array.from(row.children).filter((child) => {
+    const tag = child.tagName.toLowerCase();
+    return tag === 'th' || tag === 'td';
+  });
 }
 
 function mathText(node: Element, open: RegExp, close: RegExp): string {
@@ -14,7 +56,7 @@ function tableToMarkdown(table: Element): string {
 
   let hasMerge = false;
   rows.forEach((row) => {
-    row.querySelectorAll('th, td').forEach((cell) => {
+    rowCells(row).forEach((cell) => {
       if (
         Number.parseInt(cell.getAttribute('colspan') || '1', 10) > 1 ||
         Number.parseInt(cell.getAttribute('rowspan') || '1', 10) > 1
@@ -28,14 +70,14 @@ function tableToMarkdown(table: Element): string {
     let html = '<table>\n';
     rows.forEach((row) => {
       html += '<tr>';
-      row.querySelectorAll('th, td').forEach((cell) => {
+      rowCells(row).forEach((cell) => {
         const tag = cell.tagName.toLowerCase();
         const colspan = cell.getAttribute('colspan');
         const rowspan = cell.getAttribute('rowspan');
         let attrs = '';
         if (colspan && colspan !== '1') attrs += ` colspan="${colspan}"`;
         if (rowspan && rowspan !== '1') attrs += ` rowspan="${rowspan}"`;
-        html += `<${tag}${attrs}>${textContent(cell)}</${tag}>`;
+        html += `<${tag}${attrs}>${escapeHtml(textContent(cell)).replace(/\n+/g, '<br>')}</${tag}>`;
       });
       html += '</tr>\n';
     });
@@ -44,8 +86,8 @@ function tableToMarkdown(table: Element): string {
 
   let markdown = '';
   rows.forEach((row, index) => {
-    const cells = Array.from(row.querySelectorAll('th, td'));
-    markdown += `| ${cells.map(textContent).join(' | ')} |\n`;
+    const cells = rowCells(row);
+    markdown += `| ${cells.map(markdownTableCell).join(' | ')} |\n`;
     if (index === 0) markdown += `| ${cells.map(() => '---').join(' | ')} |\n`;
   });
   return `${markdown}\n`;
@@ -55,7 +97,7 @@ export function htmlToMarkdown(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
   function processNode(node: Node): string {
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+    if (node.nodeType === Node.TEXT_NODE) return escapeMarkdownText(node.textContent ?? '');
     if (node.nodeType !== Node.ELEMENT_NODE) return '';
 
     const el = node as Element;
@@ -125,8 +167,8 @@ export function htmlToMarkdown(html: string): string {
       case 'pre':
         return `\`\`\`\n${(el.textContent ?? '').trim()}\n\`\`\`\n\n`;
       case 'code':
-        if (el.parentElement?.tagName.toLowerCase() === 'pre') return children;
-        return `\`${children.trim()}\``;
+        if (el.parentElement?.tagName.toLowerCase() === 'pre') return el.textContent ?? '';
+        return `\`${(el.textContent ?? '').trim()}\``;
       case 'hr':
         return '---\n\n';
       case 'table':
@@ -151,7 +193,7 @@ export function htmlToMarkdown(html: string): string {
   let markdown = processNode(doc.body).replace(/\n{3,}/g, '\n\n');
   for (let i = 0; i < 5; i++) {
     markdown = markdown.replace(/\*\*([^*]+?)\*\*( ?)\*\*([^*]+?)\*\*/g, '**$1$2$3**');
-    markdown = markdown.replace(/\*([^*\n]+?)\*( ?)\*([^*\n]+?)\*/g, '*$1$2$3*');
   }
+  markdown = markdown.replace(/(\*\*[^*\n]+?\*\*)(?=[A-Za-z0-9\u3400-\u9fff])/g, '$1 ');
   return `${markdown.trim()}\n`;
 }

@@ -27084,7 +27084,7 @@ function setChildrenFromHtml(el, html2) {
   const doc = new DOMParser().parseFromString(`<body>${html2}</body>`, "text/html");
   const fragment = el.ownerDocument.createDocumentFragment();
   while (doc.body.firstChild) {
-    fragment.appendChild(el.ownerDocument.importNode(doc.body.firstChild, true));
+    fragment.appendChild(doc.body.firstChild);
   }
   el.replaceChildren(fragment);
 }
@@ -27095,6 +27095,368 @@ function renderMathToHtml(tex, displayMode) {
     strict: "ignore",
     output: "mathml"
   });
+}
+var MATH_SYMBOLS = {
+  // 希腊字母
+  alpha: "\u03B1",
+  beta: "\u03B2",
+  gamma: "\u03B3",
+  delta: "\u03B4",
+  epsilon: "\u03B5",
+  varepsilon: "\u03B5",
+  zeta: "\u03B6",
+  eta: "\u03B7",
+  theta: "\u03B8",
+  vartheta: "\u03B8",
+  iota: "\u03B9",
+  kappa: "\u03BA",
+  lambda: "\u03BB",
+  mu: "\u03BC",
+  nu: "\u03BD",
+  xi: "\u03BE",
+  pi: "\u03C0",
+  varpi: "\u03C0",
+  rho: "\u03C1",
+  varrho: "\u03C1",
+  sigma: "\u03C3",
+  varsigma: "\u03C2",
+  tau: "\u03C4",
+  upsilon: "\u03C5",
+  phi: "\u03C6",
+  varphi: "\u03C6",
+  chi: "\u03C7",
+  psi: "\u03C8",
+  omega: "\u03C9",
+  Gamma: "\u0393",
+  Delta: "\u0394",
+  Theta: "\u0398",
+  Lambda: "\u039B",
+  Xi: "\u039E",
+  Pi: "\u03A0",
+  Sigma: "\u03A3",
+  Upsilon: "\u03A5",
+  Phi: "\u03A6",
+  Psi: "\u03A8",
+  Omega: "\u03A9",
+  // 关系/运算符
+  leq: "\u2264",
+  le: "\u2264",
+  geq: "\u2265",
+  ge: "\u2265",
+  neq: "\u2260",
+  ne: "\u2260",
+  approx: "\u2248",
+  equiv: "\u2261",
+  sim: "\u223C",
+  simeq: "\u2243",
+  cong: "\u2245",
+  propto: "\u221D",
+  pm: "\xB1",
+  mp: "\u2213",
+  times: "\xD7",
+  div: "\xF7",
+  cdot: "\xB7",
+  ast: "\u2217",
+  cap: "\u2229",
+  cup: "\u222A",
+  setminus: "\u2216",
+  subset: "\u2282",
+  subseteq: "\u2286",
+  supset: "\u2283",
+  supseteq: "\u2287",
+  in: "\u2208",
+  notin: "\u2209",
+  emptyset: "\u2205",
+  varnothing: "\u2205",
+  forall: "\u2200",
+  exists: "\u2203",
+  neg: "\xAC",
+  lnot: "\xAC",
+  rightarrow: "\u2192",
+  to: "\u2192",
+  leftarrow: "\u2190",
+  gets: "\u2190",
+  Rightarrow: "\u21D2",
+  Leftarrow: "\u21D0",
+  leftrightarrow: "\u2194",
+  Leftrightarrow: "\u21D4",
+  mapsto: "\u21A6",
+  uparrow: "\u2191",
+  downarrow: "\u2193",
+  infty: "\u221E",
+  partial: "\u2202",
+  nabla: "\u2207",
+  angle: "\u2220",
+  perp: "\u22A5",
+  parallel: "\u2225",
+  sum: "\u2211",
+  prod: "\u220F",
+  coprod: "\u2210",
+  int: "\u222B",
+  oint: "\u222E",
+  iint: "\u222C",
+  iiint: "\u222D",
+  bigcup: "\u22C3",
+  bigcap: "\u22C2",
+  bigvee: "\u22C1",
+  bigwedge: "\u22C0",
+  langle: "\u27E8",
+  rangle: "\u27E9",
+  lceil: "\u2308",
+  rceil: "\u2309",
+  lfloor: "\u230A",
+  rfloor: "\u230B",
+  cdots: "\u22EF",
+  ldots: "\u2026",
+  vdots: "\u22EE",
+  ddots: "\u22F1",
+  bullet: "\u2022",
+  prime: "\u2032",
+  dagger: "\u2020",
+  ddagger: "\u2021",
+  triangle: "\u25B3",
+  square: "\u25A1",
+  mathbb: "",
+  mathcal: "",
+  mathrm: "",
+  mathbf: "",
+  mathit: "",
+  operatorname: "",
+  text: "",
+  textrm: "",
+  textit: "",
+  textbf: ""
+};
+var SUPERSCRIPT = {
+  "0": "\u2070",
+  "1": "\xB9",
+  "2": "\xB2",
+  "3": "\xB3",
+  "4": "\u2074",
+  "5": "\u2075",
+  "6": "\u2076",
+  "7": "\u2077",
+  "8": "\u2078",
+  "9": "\u2079",
+  "+": "\u207A",
+  "-": "\u207B",
+  "=": "\u207C",
+  "(": "\u207D",
+  ")": "\u207E",
+  "n": "\u207F",
+  "i": "\u2071"
+};
+var SUBSCRIPT = {
+  "0": "\u2080",
+  "1": "\u2081",
+  "2": "\u2082",
+  "3": "\u2083",
+  "4": "\u2084",
+  "5": "\u2085",
+  "6": "\u2086",
+  "7": "\u2087",
+  "8": "\u2088",
+  "9": "\u2089",
+  "+": "\u208A",
+  "-": "\u208B",
+  "=": "\u208C",
+  "(": "\u208D",
+  ")": "\u208E",
+  "a": "\u2090",
+  "e": "\u2091",
+  "o": "\u2092",
+  "x": "\u2093",
+  "h": "\u2095",
+  "k": "\u2096",
+  "l": "\u2097",
+  "m": "\u2098",
+  "n": "\u2099",
+  "p": "\u209A",
+  "s": "\u209B",
+  "t": "\u209C"
+};
+function texGroupToLinear(tokens, i, lenRef) {
+  let depth = 0;
+  const out = [];
+  let j = i;
+  for (; j < tokens.length; j++) {
+    if (tokens[j] === "{") {
+      depth++;
+      if (depth >= 2) out.push(tokens[j]);
+    } else if (tokens[j] === "}") {
+      depth--;
+      if (depth === 0) break;
+      out.push(tokens[j]);
+    } else if (depth >= 1) {
+      out.push(tokens[j]);
+    }
+  }
+  lenRef.n = j - i + 1;
+  return texToLinearInner(out);
+}
+function readArg(tokens, i, lenRef) {
+  var _a;
+  let j = i;
+  while (j < tokens.length && tokens[j] === " ") j++;
+  if (tokens[j] === "{") return texGroupToLinear(tokens, j, lenRef);
+  if (tokens[j] === "\\") {
+    let k = j + 1;
+    while (k < tokens.length && /[a-zA-Z]/.test(tokens[k])) k++;
+    const cmd = tokens.slice(j + 1, k).join("");
+    lenRef.n = k - j + (cmd.length > 0 ? 0 : 1);
+    return cmd in MATH_SYMBOLS ? MATH_SYMBOLS[cmd] : `\\${cmd}`;
+  }
+  lenRef.n = j - i + 1;
+  return (_a = tokens[j]) != null ? _a : "";
+}
+function shiftMap(s, map) {
+  var _a;
+  let out = "";
+  for (const ch of s) out += (_a = map[ch]) != null ? _a : ch;
+  return out;
+}
+function texToLinearInner(tokens) {
+  var _a;
+  let out = "";
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t === "\\") {
+      let k = i + 1;
+      while (k < tokens.length && /[a-zA-Z]/.test(tokens[k])) k++;
+      const cmd = tokens.slice(i + 1, k).join("");
+      const cmdLen = k - (i + 1) + 1;
+      if (cmd === "") {
+        out += " ";
+        i += 2;
+        continue;
+      }
+      if (cmd === "frac" || cmd === "dfrac" || cmd === "tfrac" || cmd === "cfrac") {
+        const r1 = { n: 0 };
+        const a = readArg(tokens, k, r1);
+        const r2 = { n: 0 };
+        const b = readArg(tokens, k + r1.n, r2);
+        const wrap = (s) => /[+\-*/= ]/.test(s) && s.length > 1 ? `(${s})` : s;
+        out += `${wrap(a)}/${wrap(b)}`;
+        i = k + r1.n + r2.n;
+        continue;
+      }
+      if (cmd === "sqrt") {
+        let k2 = k;
+        while (k2 < tokens.length && tokens[k2] === " ") k2++;
+        let rootStr = "";
+        if (tokens[k2] === "[") {
+          const end = tokens.indexOf("]", k2);
+          if (end !== -1) {
+            rootStr = texToLinearInner(tokens.slice(k2 + 1, end));
+            k2 = end + 1;
+          }
+        }
+        const r = { n: 0 };
+        const body = readArg(tokens, k2, r);
+        out += rootStr ? `\u221A[${rootStr}]{${body}}` : `\u221A${body.length > 1 ? `(${body})` : body}`;
+        i = k2 + r.n;
+        continue;
+      }
+      if (cmd === "^" || cmd === "_") {
+        i += cmdLen;
+        continue;
+      }
+      if (cmd in MATH_SYMBOLS) {
+        out += MATH_SYMBOLS[cmd];
+        i += cmdLen;
+        continue;
+      }
+      if (cmd === "left" || cmd === "right" || cmd === "middle" || cmd === "big" || cmd === "Big" || cmd === "Bigg" || cmd === "bigg" || cmd === "displaystyle" || cmd === "textstyle" || cmd === "limits" || cmd === "nolimits" || cmd === "scriptstyle" || cmd === "noalign" || cmd === "operatorname") {
+        i += cmdLen;
+        continue;
+      }
+      if (cmd === "begin" || cmd === "end") {
+        let k2 = k;
+        while (k2 < tokens.length && tokens[k2] === " ") k2++;
+        if (tokens[k2] === "{") {
+          const r = { n: 0 };
+          texGroupToLinear(tokens, k2, r);
+          k2 += r.n;
+        }
+        i = k2;
+        continue;
+      }
+      out += `\\${cmd}`;
+      i += cmdLen;
+      continue;
+    }
+    if (t === "^" || t === "_") {
+      const map = t === "^" ? SUPERSCRIPT : SUBSCRIPT;
+      const fallback = t === "^" ? "^" : "_";
+      let k = i + 1;
+      while (k < tokens.length && tokens[k] === " ") k++;
+      let arg;
+      const r = { n: 0 };
+      if (tokens[k] === "{") {
+        arg = texGroupToLinear(tokens, k, r);
+      } else if (tokens[k] === "\\") {
+        arg = readArg(tokens, k, r);
+      } else {
+        arg = (_a = tokens[k]) != null ? _a : "";
+        r.n = 1;
+      }
+      const converted = shiftMap(arg, map);
+      const allConvertible = [...arg].every((ch) => ch in map);
+      out += allConvertible ? converted : `${fallback}{${arg}}`;
+      i = k + r.n;
+      continue;
+    }
+    if (t === " " || t === "	" || t === "\n") {
+      i++;
+      continue;
+    }
+    out += t;
+    i++;
+  }
+  return out;
+}
+function tokenizeTex(tex) {
+  const tokens = [];
+  for (let i = 0; i < tex.length; ) {
+    const ch = tex[i];
+    if (ch === "\\") {
+      tokens.push("\\");
+      let j = i + 1;
+      while (j < tex.length && /[a-zA-Z]/.test(tex[j])) {
+        tokens.push(tex[j]);
+        j++;
+      }
+      if (j === i + 1 && tex[j] && !/[a-zA-Z]/.test(tex[j])) {
+        tokens.push(tex[j]);
+        j++;
+      }
+      i = j;
+    } else {
+      tokens.push(ch);
+      i++;
+    }
+  }
+  return tokens;
+}
+function texToLinearText(tex) {
+  const trimmed = tex.trim();
+  if (!trimmed) return "";
+  try {
+    const linear = texToLinearInner(tokenizeTex(trimmed)).replace(/\s{2,}/g, " ").trim();
+    return linear || trimmed;
+  } catch (e) {
+    return trimmed;
+  }
+}
+function rewriteMathForWord(container) {
+  const rewrite = (el) => {
+    const tex = el.getAttribute("data-tex");
+    if (!tex) return;
+    el.textContent = texToLinearText(tex);
+  };
+  container.querySelectorAll(".math-block").forEach(rewrite);
+  container.querySelectorAll(".math-inline").forEach(rewrite);
 }
 function renderMathInElement(container) {
   container.querySelectorAll(".math-block").forEach((el) => {
@@ -27572,6 +27934,38 @@ var THEMES = {
     hr: "#dddddd",
     markBg: "#e3e6f7"
   },
+  minimal: {
+    id: "minimal",
+    label: "\u6781\u7B80\u9ED1\u767D",
+    bodyFont: "'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#222222",
+    heading: "#111111",
+    accent: "#111111",
+    quoteBg: "#fafafa",
+    quoteBorder: "#111111",
+    codeBg: "#f4f4f4",
+    hr: "#e5e5e5",
+    markBg: "#eeeeee"
+  },
+  "indigo-pink-tech": {
+    id: "indigo-pink-tech",
+    label: "\u975B\u7C89\u6E10\u53D8",
+    bodyFont: "Inter,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#334155",
+    heading: "#312e81",
+    accent: "#6366f1",
+    headingBg: "linear-gradient(135deg,#6366f1,#ec4899)",
+    headingText: "#ffffff",
+    strong: "#ec4899",
+    quoteBg: "#f8f7ff",
+    quoteBorder: "#ec4899",
+    codeBg: "#eef2ff",
+    codeText: "#4338ca",
+    hr: "#e0e7ff",
+    markBg: "#fce7f3",
+    pageBg: "linear-gradient(rgba(99,102,241,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.045) 1px,transparent 1px),radial-gradient(circle at 92% 8%,rgba(236,72,153,0.16) 0 120px,transparent 122px),radial-gradient(circle at 6% 88%,rgba(99,102,241,0.16) 0 140px,transparent 142px),#ffffff",
+    pageBgSize: "40px 40px,40px 40px,auto,auto,auto"
+  },
   tech: {
     id: "tech",
     label: "\u6781\u5BA2\u6DF1\u8272",
@@ -27621,19 +28015,6 @@ var THEMES = {
     codeBg: "#fff8f1",
     hr: "#ffd6d6",
     markBg: "#ffe3e3"
-  },
-  minimal: {
-    id: "minimal",
-    label: "\u6781\u7B80\u9ED1\u767D",
-    bodyFont: "'PingFang SC','Microsoft YaHei',sans-serif",
-    text: "#222222",
-    heading: "#111111",
-    accent: "#111111",
-    quoteBg: "#fafafa",
-    quoteBorder: "#111111",
-    codeBg: "#f4f4f4",
-    hr: "#e5e5e5",
-    markBg: "#eeeeee"
   },
   amber: {
     id: "amber",
@@ -27726,25 +28107,6 @@ var THEMES = {
     hr: "#2f3763",
     markBg: "#1f2a55",
     pageBg: "#0f1220"
-  },
-  "indigo-pink-tech": {
-    id: "indigo-pink-tech",
-    label: "\u975B\u7C89\u79D1\u6280",
-    bodyFont: "Inter,'PingFang SC','Microsoft YaHei',sans-serif",
-    text: "#334155",
-    heading: "#312e81",
-    accent: "#6366f1",
-    headingBg: "linear-gradient(135deg,#6366f1,#ec4899)",
-    headingText: "#ffffff",
-    strong: "#ec4899",
-    quoteBg: "#f8f7ff",
-    quoteBorder: "#ec4899",
-    codeBg: "#eef2ff",
-    codeText: "#4338ca",
-    hr: "#e0e7ff",
-    markBg: "#fce7f3",
-    pageBg: "linear-gradient(rgba(99,102,241,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.045) 1px,transparent 1px),radial-gradient(circle at 92% 8%,rgba(236,72,153,0.16) 0 120px,transparent 122px),radial-gradient(circle at 6% 88%,rgba(99,102,241,0.16) 0 140px,transparent 142px),#ffffff",
-    pageBgSize: "40px 40px,40px 40px,auto,auto,auto"
   },
   purple: {
     id: "purple",
@@ -29128,9 +29490,35 @@ async function parseDocx(arrayBuffer) {
 }
 
 // src/html-to-markdown.ts
-function textContent(node) {
+function escapeHtml4(str = "") {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function escapeMarkdownText(str = "") {
+  return str.replace(/\\/g, "\\\\").replace(/([*_`~[\]|])/g, "\\$1");
+}
+function cellText(node) {
   var _a;
-  return ((_a = node.textContent) != null ? _a : "").trim();
+  if (node.nodeType === Node.TEXT_NODE) return (_a = node.textContent) != null ? _a : "";
+  if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  const el = node;
+  const tag2 = el.tagName.toLowerCase();
+  if (tag2 === "br") return "\n";
+  const text2 = Array.from(el.childNodes).map(cellText).join("");
+  if (tag2 === "p" || tag2 === "div" || tag2 === "li") return `${text2}
+`;
+  return text2;
+}
+function textContent(node) {
+  return cellText(node).trim();
+}
+function markdownTableCell(node) {
+  return cellText(node).replace(/\r\n?/g, "\n").split("\n").map((line) => line.replace(/[ \t]+/g, " ").trim()).filter(Boolean).map(escapeMarkdownText).join("<br>");
+}
+function rowCells(row) {
+  return Array.from(row.children).filter((child) => {
+    const tag2 = child.tagName.toLowerCase();
+    return tag2 === "th" || tag2 === "td";
+  });
 }
 function mathText(node, open2, close2) {
   var _a;
@@ -29143,7 +29531,7 @@ function tableToMarkdown(table) {
   if (!rows.length) return "";
   let hasMerge = false;
   rows.forEach((row) => {
-    row.querySelectorAll("th, td").forEach((cell) => {
+    rowCells(row).forEach((cell) => {
       if (Number.parseInt(cell.getAttribute("colspan") || "1", 10) > 1 || Number.parseInt(cell.getAttribute("rowspan") || "1", 10) > 1) {
         hasMerge = true;
       }
@@ -29153,14 +29541,14 @@ function tableToMarkdown(table) {
     let html2 = "<table>\n";
     rows.forEach((row) => {
       html2 += "<tr>";
-      row.querySelectorAll("th, td").forEach((cell) => {
+      rowCells(row).forEach((cell) => {
         const tag2 = cell.tagName.toLowerCase();
         const colspan = cell.getAttribute("colspan");
         const rowspan = cell.getAttribute("rowspan");
         let attrs = "";
         if (colspan && colspan !== "1") attrs += ` colspan="${colspan}"`;
         if (rowspan && rowspan !== "1") attrs += ` rowspan="${rowspan}"`;
-        html2 += `<${tag2}${attrs}>${textContent(cell)}</${tag2}>`;
+        html2 += `<${tag2}${attrs}>${escapeHtml4(textContent(cell)).replace(/\n+/g, "<br>")}</${tag2}>`;
       });
       html2 += "</tr>\n";
     });
@@ -29170,8 +29558,8 @@ function tableToMarkdown(table) {
   }
   let markdown = "";
   rows.forEach((row, index) => {
-    const cells = Array.from(row.querySelectorAll("th, td"));
-    markdown += `| ${cells.map(textContent).join(" | ")} |
+    const cells = rowCells(row);
+    markdown += `| ${cells.map(markdownTableCell).join(" | ")} |
 `;
     if (index === 0) markdown += `| ${cells.map(() => "---").join(" | ")} |
 `;
@@ -29182,8 +29570,8 @@ function tableToMarkdown(table) {
 function htmlToMarkdown(html2) {
   const doc = new DOMParser().parseFromString(html2, "text/html");
   function processNode(node) {
-    var _a, _b, _c;
-    if (node.nodeType === Node.TEXT_NODE) return (_a = node.textContent) != null ? _a : "";
+    var _a, _b, _c, _d, _e;
+    if (node.nodeType === Node.TEXT_NODE) return escapeMarkdownText((_a = node.textContent) != null ? _a : "");
     if (node.nodeType !== Node.ELEMENT_NODE) return "";
     const el = node;
     const tag2 = el.tagName.toLowerCase();
@@ -29271,8 +29659,8 @@ ${((_b = el.textContent) != null ? _b : "").trim()}
 
 `;
       case "code":
-        if (((_c = el.parentElement) == null ? void 0 : _c.tagName.toLowerCase()) === "pre") return children;
-        return `\`${children.trim()}\``;
+        if (((_c = el.parentElement) == null ? void 0 : _c.tagName.toLowerCase()) === "pre") return (_d = el.textContent) != null ? _d : "";
+        return `\`${((_e = el.textContent) != null ? _e : "").trim()}\``;
       case "hr":
         return "---\n\n";
       case "table":
@@ -29300,15 +29688,15 @@ $$
   let markdown = processNode(doc.body).replace(/\n{3,}/g, "\n\n");
   for (let i = 0; i < 5; i++) {
     markdown = markdown.replace(/\*\*([^*]+?)\*\*( ?)\*\*([^*]+?)\*\*/g, "**$1$2$3**");
-    markdown = markdown.replace(/\*([^*\n]+?)\*( ?)\*([^*\n]+?)\*/g, "*$1$2$3*");
   }
+  markdown = markdown.replace(/(\*\*[^*\n]+?\*\*)(?=[A-Za-z0-9\u3400-\u9fff])/g, "$1 ");
   return `${markdown.trim()}
 `;
 }
 
 // src/word.ts
 var WORD_CONTENT_MAX_WIDTH_PX = 560;
-function escapeHtml4(str = "") {
+function escapeHtml5(str = "") {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function getStyleValue(style, prop) {
@@ -29558,6 +29946,7 @@ async function constrainImagesForWord(root) {
 async function prepareHtmlForWord(html2) {
   const doc = new DOMParser().parseFromString(`<body>${html2}</body>`, "text/html");
   normalizeGradientStylesForWord(doc.body);
+  rewriteMathForWord(doc.body);
   await constrainImagesForWord(doc.body);
   return doc.body.innerHTML;
 }
@@ -29573,7 +29962,7 @@ async function createWordDocumentBlob(html2, title) {
       xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="utf-8">
-  <title>${escapeHtml4(title || "Export")}</title>
+  <title>${escapeHtml5(title || "Export")}</title>
   <style>
     body {
       font-family: "PingFang SC", "Microsoft YaHei", SimHei, sans-serif;
