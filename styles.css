@@ -103,6 +103,8 @@
 .mn-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* ---------------- 第二行调节栏：字号 / 段距 / 预览模式 ---------------- */
@@ -245,6 +247,21 @@
 .mn-btn-icon svg {
   width: 14px;
   height: 14px;
+}
+
+.mn-paper .math-block {
+  max-width: 100%;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.mn-paper .math-inline {
+  max-width: 100%;
+}
+
+.mn-paper math {
+  max-width: 100%;
+  font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
 }
 
 /* ---------------- 预览纸面 ---------------- */

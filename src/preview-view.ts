@@ -19,10 +19,11 @@ export const PREVIEW_VIEW_TYPE = 'marknice-wechat-preview';
  */
 function setInnerHtml(target: HTMLElement, html: string): void {
   const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+  const wrapper = doc.body.firstElementChild;
   target.empty();
   const fragment = document.createDocumentFragment();
-  while (doc.body.firstChild) {
-    fragment.appendChild(doc.body.firstChild);
+  while (wrapper?.firstChild) {
+    fragment.appendChild(wrapper.firstChild);
   }
   target.appendChild(fragment);
 }
@@ -37,7 +38,9 @@ export class WechatPreviewView extends ItemView {
   private paraSpacingLabelEl!: HTMLElement;
   private desktopBtnEl!: HTMLButtonElement;
   private phoneBtnEl!: HTMLButtonElement;
-  private requestRender = debounce(() => void this.render(), 400, true);
+  private renderRequested = false;
+  private renderRunning = false;
+  private requestRender = debounce(() => void this.flushRenderQueue(), 400, true);
 
   constructor(leaf: WorkspaceLeaf, private plugin: MarkNicePlugin) {
     super(leaf);
@@ -79,10 +82,16 @@ export class WechatPreviewView extends ItemView {
     this.themeSelectEl.addEventListener('change', async () => {
       this.plugin.settings.defaultTheme = this.themeSelectEl.value;
       await this.plugin.saveSettings();
-      void this.render();
+      this.scheduleRender();
     });
 
     const actions = toolbar.createDiv({ cls: 'mn-actions' });
+    this.makeButton(actions, 'file-input', '导入 Word', 'mn-btn', () => {
+      void this.plugin.importWordDocument();
+    });
+    this.makeButton(actions, 'file-output', '导出 Word', 'mn-btn', () => {
+      if (this.file) void this.plugin.exportWordDocument(this.file);
+    });
     this.makeButton(actions, 'copy', '复制', 'mn-btn', () => {
       if (this.file) void this.plugin.copyAsWechat(this.file);
     });
@@ -119,13 +128,13 @@ export class WechatPreviewView extends ItemView {
       this.app.workspace.on('file-open', (file) => {
         if (file && file.extension === 'md') {
           this.file = file;
-          this.requestRender();
+          this.scheduleRender();
         }
       })
     );
     this.registerEvent(
       this.app.vault.on('modify', (file) => {
-        if (file === this.file) this.requestRender();
+        if (file === this.file) this.scheduleRender();
       })
     );
 
@@ -192,7 +201,7 @@ export class WechatPreviewView extends ItemView {
     this.plugin.settings.fontSizeOffset = next;
     await this.plugin.saveSettings();
     this.fontSizeLabelEl.setText(formatOffset(next));
-    void this.render();
+    this.scheduleRender();
   }
 
   private async changeParaSpacing(delta: number): Promise<void> {
@@ -204,7 +213,7 @@ export class WechatPreviewView extends ItemView {
     this.plugin.settings.paraSpacingOffset = next;
     await this.plugin.saveSettings();
     this.paraSpacingLabelEl.setText(formatOffset(next));
-    void this.render();
+    this.scheduleRender();
   }
 
   private applyPreviewMode(): void {
@@ -216,7 +225,7 @@ export class WechatPreviewView extends ItemView {
 
   setFile(file: TFile): void {
     this.file = file;
-    this.requestRender();
+    this.scheduleRender();
   }
 
   refresh(): void {
@@ -224,7 +233,25 @@ export class WechatPreviewView extends ItemView {
     this.fontSizeLabelEl.setText(formatOffset(this.plugin.settings.fontSizeOffset));
     this.paraSpacingLabelEl.setText(formatOffset(this.plugin.settings.paraSpacingOffset));
     this.applyPreviewMode();
+    this.scheduleRender();
+  }
+
+  private scheduleRender(): void {
+    this.renderRequested = true;
     this.requestRender();
+  }
+
+  private async flushRenderQueue(): Promise<void> {
+    if (this.renderRunning) return;
+    this.renderRunning = true;
+    try {
+      do {
+        this.renderRequested = false;
+        await this.render();
+      } while (this.renderRequested);
+    } finally {
+      this.renderRunning = false;
+    }
   }
 
   private async render(): Promise<void> {

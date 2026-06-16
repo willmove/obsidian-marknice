@@ -1,9 +1,16 @@
-import { MarkdownView, Notice, Platform, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { MarkdownView, Notice, Platform, Plugin, TFile, WorkspaceLeaf, normalizePath } from 'obsidian';
 import { ConvertResult, convertFileToWechat } from './converter';
 import { DEFAULT_SETTINGS, MarkNiceSettingTab, MarkNiceSettings } from './settings';
 import { PREVIEW_VIEW_TYPE, WechatPreviewView } from './preview-view';
 import { PublishModal } from './publish-modal';
 import { WechatTheme, getTheme } from './themes';
+import { createWordDocumentBlob, docxArrayBufferToMarkdown } from './word';
+
+const DOCX_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+function sanitizeFileBaseName(name: string): string {
+  return name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim() || 'Untitled';
+}
 
 export default class MarkNicePlugin extends Plugin {
   settings: MarkNiceSettings = DEFAULT_SETTINGS;
@@ -39,6 +46,23 @@ export default class MarkNicePlugin extends Plugin {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
         if (!checking) void this.openPublishModal(file);
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: 'import-word-document',
+      name: '导入 Word 文档为 Markdown',
+      callback: () => void this.importWordDocument(),
+    });
+
+    this.addCommand({
+      id: 'export-word-document',
+      name: '导出当前笔记为 Word 文档',
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.exportWordDocument(file);
         return true;
       },
     });
@@ -117,6 +141,79 @@ export default class MarkNicePlugin extends Plugin {
       console.error('[MarkNice WeChat] convert failed', err);
       new Notice(`转换失败：${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  async importWordDocument(): Promise<void> {
+    const picked = await this.pickWordFile();
+    if (!picked) return;
+
+    try {
+      new Notice('正在导入 Word 文档...');
+      const markdown = await docxArrayBufferToMarkdown(await picked.arrayBuffer());
+      const folder = this.getActiveFolderPath();
+      const path = this.getAvailableVaultPath(folder, sanitizeFileBaseName(picked.name), 'md');
+      const created = await this.app.vault.create(path, markdown);
+      await this.app.workspace.getLeaf(true).openFile(created);
+      new Notice(`已导入 Word 文档：${created.path}`);
+      await this.activatePreview();
+    } catch (err) {
+      console.error('[MarkNice WeChat] import Word failed', err);
+      new Notice(`导入 Word 失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async exportWordDocument(file: TFile): Promise<void> {
+    try {
+      new Notice('正在生成 Word 文档...');
+      const result = await this.convert(file);
+      const blob = await createWordDocumentBlob(result.html, result.title);
+      const folder = file.parent?.path ?? '';
+      const path = this.getAvailableVaultPath(folder, sanitizeFileBaseName(file.basename), 'docx');
+      const created = await this.app.vault.createBinary(path, await blob.arrayBuffer());
+      new Notice(`已导出 Word 文档：${created.path}`);
+    } catch (err) {
+      console.error('[MarkNice WeChat] export Word failed', err);
+      new Notice(`导出 Word 失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private pickWordFile(): Promise<File | null> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = DOCX_ACCEPT;
+      input.style.display = 'none';
+      let finished = false;
+
+      const finish = (file: File | null): void => {
+        if (finished) return;
+        finished = true;
+        input.remove();
+        resolve(file);
+      };
+
+      input.addEventListener('change', () => finish(input.files?.[0] ?? null), { once: true });
+      input.addEventListener('cancel', () => finish(null), { once: true });
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+
+  private getActiveFolderPath(): string {
+    const file = this.getActiveMarkdownFile() ?? this.app.workspace.getActiveFile();
+    return file?.parent?.path ?? '';
+  }
+
+  private getAvailableVaultPath(folder: string, baseName: string, extension: string): string {
+    const safeBase = sanitizeFileBaseName(baseName);
+    const prefix = folder ? `${folder}/` : '';
+    let candidate = normalizePath(`${prefix}${safeBase}.${extension}`);
+    let index = 2;
+    while (this.app.vault.getAbstractFileByPath(candidate)) {
+      candidate = normalizePath(`${prefix}${safeBase} ${index}.${extension}`);
+      index++;
+    }
+    return candidate;
   }
 
   async activatePreview(): Promise<void> {

@@ -10,7 +10,7 @@
 
 - **实时预览**：右侧面板按公众号实际效果渲染当前笔记，编辑自动刷新
 - **双预览模式**：手机模式（375px 手机画框，模拟读者实际所见）/ 桌面模式 一键切换
-- **17 套主题**：Claude 暖陶（Anthropic 风格）、经典蓝、杂志衬线、极客深色、优雅棕、活力红、极简黑白、琥珀橙、清新绿、新闻纸、杂志红、复古纸、夜空蓝、暖红、梦幻紫、海盐青等
+- **16 套主题**：Claude 暖陶（Anthropic 风格）、经典蓝、杂志衬线、极客深色、优雅棕、活力红、极简黑白、琥珀橙、清新绿、健康绿、杂志红、复古纸、夜空蓝、靛粉科技、梦幻紫、海盐青
 - **字号 / 段距微调**：在主题基础上整体增减字号（±6px）与段落间距（−16~+24px），预览、复制、发草稿全程生效
 - **一键复制**：所有样式内联写入 `style` 属性，粘贴进公众号编辑器排版不乱
 - **一键发草稿**：直接调用公众号接口创建草稿，自动上传封面与正文图片（本地图、`![[wiki 嵌入]]`、远程图都会转成微信图床链接）
@@ -77,7 +77,7 @@ marknice-obsidian/
 ├── src/
 │   ├── main.ts          # 插件入口：命令、视图注册
 │   ├── converter.ts     # Markdown → 公众号内联样式 HTML
-│   ├── themes.ts        # 17 套排版主题
+│   ├── themes.ts        # 16 套排版主题
 │   ├── wechat-api.ts    # 公众号接口客户端（token / 上传 / 草稿）
 │   ├── preview-view.ts  # 右侧预览面板
 │   ├── publish-modal.ts # 发草稿弹窗
@@ -101,7 +101,7 @@ Turn Obsidian notes into polished WeChat Official Account articles: **themed for
 
 - **Live preview** panel that renders the active note exactly as it will appear in WeChat, refreshing as you type
 - **Phone & desktop preview modes** — phone mode wraps the preview in a 375px device frame to mirror what readers actually see
-- **17 themes**, including a Claude-inspired warm-clay style
+- **16 themes**, including a Claude-inspired warm-clay style and a clean health-green style
 - **Font size & paragraph spacing tuning** (±6px / −16~+24px) applied consistently to preview, copy, and draft publishing
 - **One-click copy** — every style is inlined into `style` attributes, so pasting into the WeChat editor never breaks the layout
 - **Publish to draft box** via the official API: cover and body images (local files, `![[wiki embeds]]`, remote URLs) are uploaded to WeChat hosting automatically

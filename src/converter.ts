@@ -1,6 +1,6 @@
 import { App, TFile, arrayBufferToBase64 } from 'obsidian';
-import { marked } from 'marked';
 import { WechatTheme } from './themes';
+import { parseMarkdownWithMath, renderMathInElement } from './math';
 
 export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
@@ -90,9 +90,10 @@ function setStyle(el: Element, style: string): void {
  */
 function htmlToNodes(html: string): DocumentFragment {
   const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+  const wrapper = doc.body.firstElementChild;
   const fragment = document.createDocumentFragment();
-  while (doc.body.firstChild) {
-    fragment.appendChild(doc.body.firstChild);
+  while (wrapper?.firstChild) {
+    fragment.appendChild(wrapper.firstChild);
   }
   return fragment;
 }
@@ -124,6 +125,74 @@ function scaleStyle(style: string, fontOffset: number, spacingOffset: number): s
     );
   }
   return s;
+}
+
+function headingStyle(
+  theme: WechatTheme,
+  fontOffset: number,
+  spacingOffset: number,
+  opts: {
+    margin: string;
+    fontSize: number;
+    lineHeight: number;
+    fontWeight: number;
+    paddingLeft: number;
+    bgPadding: string;
+    bgRadius: number;
+    tailHeight: number;
+    tailWidth: number;
+  }
+): string {
+  if (theme.headingVariant === 'ribbon') {
+    return scaleStyle(
+      `margin:${opts.margin};border-bottom:2px solid ${
+        theme.headingLine ?? theme.accent
+      };line-height:0;`,
+      fontOffset,
+      spacingOffset
+    );
+  }
+  if (theme.headingBg) {
+    return scaleStyle(
+      `margin:${opts.margin};padding:${opts.bgPadding};background:${theme.headingBg};border-radius:${opts.bgRadius}px;color:${
+        theme.headingText ?? theme.heading
+      };font-size:${opts.fontSize}px;line-height:${opts.lineHeight};font-weight:${opts.fontWeight};box-shadow:0 10px 24px rgba(79,70,229,0.16);`,
+      fontOffset,
+      spacingOffset
+    );
+  }
+  return scaleStyle(
+    `margin:${opts.margin};padding-left:${opts.paddingLeft}px;border-left:4px solid ${theme.accent};font-size:${opts.fontSize}px;line-height:${opts.lineHeight};color:${theme.heading};font-weight:${opts.fontWeight};`,
+    fontOffset,
+    spacingOffset
+  );
+}
+
+function ribbonHeadingHtml(
+  theme: WechatTheme,
+  text: string,
+  fontOffset: number,
+  spacingOffset: number,
+  opts: Parameters<typeof headingStyle>[3]
+): string {
+  const wrapStyle = headingStyle(theme, fontOffset, spacingOffset, opts);
+  const labelStyle = scaleStyle(
+    `display:inline-block;box-sizing:border-box;max-width:88%;padding:${opts.bgPadding};background:${
+      theme.headingBg ?? theme.accent
+    };border-radius:${opts.bgRadius}px ${opts.bgRadius}px 0 0;color:${
+      theme.headingText ?? '#ffffff'
+    };font-size:${opts.fontSize}px;line-height:${opts.lineHeight};font-weight:${
+      opts.fontWeight
+    };letter-spacing:0;vertical-align:bottom;`,
+    fontOffset,
+    spacingOffset
+  );
+  const tailStyle = `display:inline-block;width:0;height:0;border-left:${opts.tailWidth}px solid ${
+    theme.headingTailBg ?? '#e5e7eb'
+  };border-top:${opts.tailHeight}px solid transparent;vertical-align:bottom;`;
+  return `<section style="${wrapStyle}"><section style="${labelStyle}">${escapeHtml(
+    text
+  )}</section><span style="${tailStyle}"></span></section>`;
 }
 
 /**
@@ -159,15 +228,45 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   });
 
   body.querySelectorAll('h1').forEach((el) => {
+    const opts = {
+      margin: '28px 0 18px',
+      fontSize: 24,
+      lineHeight: 1.4,
+      fontWeight: 800,
+      paddingLeft: 12,
+      bgPadding: '8px 14px 7px',
+      bgRadius: 3,
+      tailHeight: 48,
+      tailWidth: 26,
+    };
+    if (theme.headingVariant === 'ribbon') {
+      replaceWithHtml(el, ribbonHeadingHtml(theme, el.textContent ?? '', fontOffset, spacingOffset, opts));
+      return;
+    }
     setStyle(
       el,
-      st(`margin:28px 0 18px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:24px;line-height:1.4;color:${theme.heading};font-weight:700;`)
+      headingStyle(theme, fontOffset, spacingOffset, opts)
     );
   });
   body.querySelectorAll('h2').forEach((el) => {
+    const opts = {
+      margin: '24px 0 14px',
+      fontSize: 21,
+      lineHeight: 1.45,
+      fontWeight: 800,
+      paddingLeft: 10,
+      bgPadding: '7px 13px 6px',
+      bgRadius: 3,
+      tailHeight: 42,
+      tailWidth: 23,
+    };
+    if (theme.headingVariant === 'ribbon') {
+      replaceWithHtml(el, ribbonHeadingHtml(theme, el.textContent ?? '', fontOffset, spacingOffset, opts));
+      return;
+    }
     setStyle(
       el,
-      st(`margin:24px 0 14px;padding-left:10px;border-left:4px solid ${theme.accent};font-size:21px;line-height:1.45;color:${theme.heading};font-weight:700;`)
+      headingStyle(theme, fontOffset, spacingOffset, opts)
     );
   });
   body.querySelectorAll('h3').forEach((el) => {
@@ -234,7 +333,9 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
       el,
       `<code style="font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${
         theme.accent
-      };padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml(el.textContent ?? '')}</code>`
+      };display:inline;white-space:normal;padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml(
+        el.textContent ?? ''
+      )}</code>`
     );
   });
 
@@ -283,6 +384,16 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
 
   body.querySelectorAll('hr').forEach((el) => {
     replaceWithHtml(el, `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`);
+  });
+
+  body.querySelectorAll('.math-block').forEach((el) => {
+    setStyle(
+      el,
+      st(`display:block;margin:18px 0;text-align:center;overflow-x:auto;line-height:1.5;color:${theme.text};font-size:16px;`)
+    );
+  });
+  body.querySelectorAll('.math-inline').forEach((el) => {
+    setStyle(el, `display:inline-block;vertical-align:middle;color:${theme.text};font-size:1em;`);
   });
 
   leftAlignReferenceSection(body);
@@ -390,8 +501,7 @@ export async function convertFileToWechat(
   const title = meta.title ?? file.basename;
 
   const markdown = preprocessObsidianSyntax(app, stripFrontmatter(raw), file.path);
-  marked.setOptions({ gfm: true, breaks: false });
-  const rawHtml = marked.parse(markdown) as string;
+  const rawHtml = parseMarkdownWithMath(markdown);
 
   const doc = new DOMParser().parseFromString(`<body>${rawHtml}</body>`, 'text/html');
   const body = doc.body;
@@ -400,22 +510,44 @@ export async function convertFileToWechat(
   const spacingOffset = options.paraSpacingOffset ?? 0;
   applyThemeStyles(body, theme, fontOffset, spacingOffset);
   const firstImage = await resolveImages(app, body, file.path);
+  const plainText = (body.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
+  renderMathInElement(body);
 
   const titleHtml = options.includeTitleInBody
-    ? `<h1 style="${scaleStyle(
-        `margin:0 0 24px;padding-left:12px;border-left:4px solid ${theme.accent};font-size:26px;line-height:1.4;color:${theme.heading};font-weight:700;`,
-        fontOffset,
-        spacingOffset
-      )}">${escapeHtml(title)}</h1>`
+    ? theme.headingVariant === 'ribbon'
+      ? ribbonHeadingHtml(theme, title, fontOffset, spacingOffset, {
+          margin: '0px 0 24px',
+          fontSize: 26,
+          lineHeight: 1.4,
+          fontWeight: 800,
+          paddingLeft: 12,
+          bgPadding: '8px 16px 7px',
+          bgRadius: 3,
+          tailHeight: 51,
+          tailWidth: 28,
+        })
+      : `<h1 style="${headingStyle(theme, fontOffset, spacingOffset, {
+        margin: '0px 0 24px',
+        fontSize: 26,
+        lineHeight: 1.4,
+        fontWeight: 800,
+        paddingLeft: 12,
+        bgPadding: '12px 16px',
+        bgRadius: 14,
+        tailHeight: 51,
+        tailWidth: 28,
+      })}">${escapeHtml(title)}</h1>`
     : '';
 
-  const pageBgStyle = theme.pageBg ? `background:${theme.pageBg};padding:24px 20px;border-radius:8px;` : '';
+  const pageBgStyle = theme.pageBg
+    ? `background:${theme.pageBg};${
+        theme.pageBgSize ? `background-size:${theme.pageBgSize};` : ''
+      }padding:24px 20px;border-radius:8px;`
+    : '';
   const html = `<section style="font-family:${theme.bodyFont};font-size:${Math.max(
     16 + fontOffset,
     9
   )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
-
-  const plainText = (body.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
 
   return { html, plainText, title, meta, firstImage };
 }

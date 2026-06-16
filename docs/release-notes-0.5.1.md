@@ -6,7 +6,7 @@ First community release of MarkNice WeChat — convert Obsidian notes into polis
 
 - **Live preview** panel that renders the active note exactly as it will appear in WeChat, refreshing as you type
 - **Phone & desktop preview modes** — phone mode wraps the preview in a 375px device frame to mirror what readers actually see
-- **17 themes**, including a Claude-inspired warm-clay style, plus classic blue, magazine serif, geek dark, and more
+- **16 themes**, including a Claude-inspired warm-clay style, plus classic blue, magazine serif, geek dark, and more
 - **Font size & paragraph spacing tuning** (±6px / −16~+24px) applied consistently to preview, copy, and draft publishing
 - **One-click copy** — every style is inlined into `style` attributes, so pasting into the WeChat editor never breaks the layout
 - **Publish to draft box** via the official WeChat API: cover and body images (local files, `![[wiki embeds]]`, remote URLs) are uploaded to WeChat hosting automatically
