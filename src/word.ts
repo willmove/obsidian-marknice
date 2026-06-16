@@ -1,6 +1,7 @@
 import htmlDocx from 'html-docx-js/dist/html-docx';
 import { parseDocx } from './docx-parser';
 import { htmlToMarkdown } from './html-to-markdown';
+import { rewriteMathForWord } from './math';
 
 const WORD_CONTENT_MAX_WIDTH_PX = 560;
 
@@ -317,6 +318,9 @@ async function constrainImagesForWord(root: ParentNode): Promise<void> {
 async function prepareHtmlForWord(html: string): Promise<string> {
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
   normalizeGradientStylesForWord(doc.body);
+  // 公式降级为线性可读文本：Word 的 altChunk 不支持 MathML 与 KaTeX 的 CSS 定位，
+  // mathml 输出还会因 <annotation> 导致重复，故导出前转成线性文本。
+  rewriteMathForWord(doc.body);
   await constrainImagesForWord(doc.body);
   return doc.body.innerHTML;
 }
