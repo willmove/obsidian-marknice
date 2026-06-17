@@ -5,6 +5,7 @@ import { PREVIEW_VIEW_TYPE, WechatPreviewView } from './preview-view';
 import { PublishModal } from './publish-modal';
 import { WechatTheme, getTheme } from './themes';
 import { createWordDocumentBlob, docxArrayBufferToMarkdown } from './word';
+import { createPdfArrayBuffer } from './pdf';
 
 const DOCX_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -63,6 +64,17 @@ export default class MarkNicePlugin extends Plugin {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
         if (!checking) void this.exportWordDocument(file);
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: 'export-pdf-document',
+      name: '导出当前笔记为 PDF',
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.exportPdfDocument(file);
         return true;
       },
     });
@@ -174,6 +186,25 @@ export default class MarkNicePlugin extends Plugin {
     } catch (err) {
       console.error('[MarkNice WeChat] export Word failed', err);
       new Notice(`导出 Word 失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async exportPdfDocument(file: TFile): Promise<void> {
+    if (Platform.isMobile) {
+      new Notice('导出 PDF 仅支持桌面端，请在电脑上使用该功能。');
+      return;
+    }
+    try {
+      new Notice('正在生成 PDF 文档...');
+      const result = await this.convert(file);
+      const pdf = await createPdfArrayBuffer(result.html, result.title);
+      const folder = file.parent?.path ?? '';
+      const path = this.getAvailableVaultPath(folder, sanitizeFileBaseName(file.basename), 'pdf');
+      const created = await this.app.vault.createBinary(path, pdf);
+      new Notice(`已导出 PDF 文档：${created.path}`);
+    } catch (err) {
+      console.error('[MarkNice WeChat] export PDF failed', err);
+      new Notice(`导出 PDF 失败：${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

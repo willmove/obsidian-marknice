@@ -92,6 +92,9 @@ export class WechatPreviewView extends ItemView {
     this.makeButton(actions, 'file-output', '导出 Word', 'mn-btn', () => {
       if (this.file) void this.plugin.exportWordDocument(this.file);
     });
+    this.makeButton(actions, 'file-down', '导出 PDF', 'mn-btn', () => {
+      if (this.file) void this.plugin.exportPdfDocument(this.file);
+    });
     this.makeButton(actions, 'copy', '复制', 'mn-btn', () => {
       if (this.file) void this.plugin.copyAsWechat(this.file);
     });

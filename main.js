@@ -17849,6 +17849,9 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
     this.makeButton(actions, "file-output", "\u5BFC\u51FA Word", "mn-btn", () => {
       if (this.file) void this.plugin.exportWordDocument(this.file);
     });
+    this.makeButton(actions, "file-down", "\u5BFC\u51FA PDF", "mn-btn", () => {
+      if (this.file) void this.plugin.exportPdfDocument(this.file);
+    });
     this.makeButton(actions, "copy", "\u590D\u5236", "mn-btn", () => {
       if (this.file) void this.plugin.copyAsWechat(this.file);
     });
@@ -20595,9 +20598,52 @@ async function constrainImagesForWord(root) {
     }
   }
 }
+function compactTablesForWord(root) {
+  root.querySelectorAll("table").forEach((table) => {
+    var _a2;
+    let style = (_a2 = table.getAttribute("style")) != null ? _a2 : "";
+    style = upsertStyle(style, "border-collapse", "collapse");
+    style = upsertStyle(style, "width", "100%");
+    style = upsertStyle(style, "margin", "8px 0");
+    table.setAttribute("style", style);
+  });
+  root.querySelectorAll("td, th").forEach((cell) => {
+    var _a2;
+    let style = (_a2 = cell.getAttribute("style")) != null ? _a2 : "";
+    style = upsertStyle(style, "padding", "3px 6px");
+    style = upsertStyle(style, "mso-padding-alt", "2pt 4pt 2pt 4pt");
+    style = upsertStyle(style, "line-height", "1.35");
+    style = upsertStyle(style, "mso-line-height-rule", "auto");
+    style = upsertStyle(style, "vertical-align", "middle");
+    cell.setAttribute("style", style);
+  });
+  root.querySelectorAll("td p, th p").forEach((paragraph2) => {
+    var _a2;
+    let style = (_a2 = paragraph2.getAttribute("style")) != null ? _a2 : "";
+    style = upsertStyle(style, "margin", "0");
+    style = upsertStyle(style, "line-height", "1.35");
+    paragraph2.setAttribute("style", style);
+  });
+  root.querySelectorAll("td ul, td ol, th ul, th ol").forEach((list2) => {
+    var _a2;
+    let style = (_a2 = list2.getAttribute("style")) != null ? _a2 : "";
+    style = upsertStyle(style, "margin", "0");
+    style = upsertStyle(style, "padding-left", "18px");
+    style = upsertStyle(style, "line-height", "1.35");
+    list2.setAttribute("style", style);
+  });
+  root.querySelectorAll("td li, th li").forEach((item) => {
+    var _a2;
+    let style = (_a2 = item.getAttribute("style")) != null ? _a2 : "";
+    style = upsertStyle(style, "margin", "0");
+    style = upsertStyle(style, "line-height", "1.35");
+    item.setAttribute("style", style);
+  });
+}
 async function prepareHtmlForWord(html2) {
   const doc = new DOMParser().parseFromString(`<body>${html2}</body>`, "text/html");
   normalizeGradientStylesForWord(doc.body);
+  compactTablesForWord(doc.body);
   rewriteMathForWord(doc.body);
   await constrainImagesForWord(doc.body);
   return doc.body.innerHTML;
@@ -20632,8 +20678,11 @@ async function createWordDocumentBlob(html2, title) {
     ul, ol { margin: 10px 0; padding-left: 24px; }
     li { margin: 6px 0; }
     blockquote { margin: 10px 0; padding: 8px 16px; border-left: 4px solid #ddd; background: #f8f8f8; color: #666; }
-    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-    td, th { border: 1px solid #ccc; padding: 6px 10px; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    td, th { border: 1px solid #ccc; padding: 3px 6px; line-height: 1.35; mso-padding-alt: 2pt 4pt 2pt 4pt; vertical-align: middle; }
+    td p, th p { margin: 0; line-height: 1.35; }
+    td ul, td ol, th ul, th ol { margin: 0; padding-left: 18px; line-height: 1.35; }
+    td li, th li { margin: 0; line-height: 1.35; }
     th { background: #f5f5f5; font-weight: bold; }
     pre { background: #f6f6f6; padding: 12px; border-radius: 4px; white-space: pre-wrap; }
     code { font-family: Consolas, Monaco, "Courier New", monospace; font-size: 13px; }
@@ -20654,6 +20703,141 @@ ${bodyHtml}
 </body>
 </html>`;
   return createWordDocxBlob(wordHtml);
+}
+
+// src/pdf.ts
+function escapeHtml6(str = "") {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function buildPrintableHtml(bodyHtml, title) {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml6(title || "Export")}</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #333;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .mn-pdf-page {
+    box-sizing: border-box;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 28px;
+  }
+  .mn-pdf-page img { max-width: 100%; height: auto; }
+  .mn-pdf-page pre,
+  .mn-pdf-page blockquote,
+  .mn-pdf-page table,
+  .mn-pdf-page figure { page-break-inside: avoid; }
+  .mn-pdf-page h1,
+  .mn-pdf-page h2,
+  .mn-pdf-page h3,
+  .mn-pdf-page h4 { page-break-after: avoid; }
+  @media print {
+    .mn-pdf-page { max-width: none; margin: 0; padding: 0; }
+    @page { margin: 16mm 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="mn-pdf-page">${bodyHtml}</div>
+</body>
+</html>`;
+}
+function getDesktopRequire() {
+  var _a2;
+  const requireFn = (_a2 = window.require) != null ? _a2 : typeof require === "function" ? require : void 0;
+  if (!requireFn) throw new Error("\u5F53\u524D\u73AF\u5883\u65E0\u6CD5\u8BBF\u95EE\u684C\u9762\u7AEF\u8FD0\u884C\u65F6");
+  return requireFn;
+}
+function getElectronRemote(requireFn) {
+  var _a2;
+  const electron = requireFn("electron");
+  if ((_a2 = electron.remote) == null ? void 0 : _a2.BrowserWindow) return electron.remote;
+  try {
+    const remote = requireFn("@electron/remote");
+    if (remote == null ? void 0 : remote.BrowserWindow) return remote;
+  } catch (e) {
+  }
+  throw new Error("\u5F53\u524D Obsidian \u684C\u9762\u7AEF\u672A\u66B4\u9732 PDF \u6E32\u67D3\u6240\u9700\u7684 Electron BrowserWindow");
+}
+function getNodeHelpers(requireFn) {
+  return {
+    fs: requireFn("fs/promises"),
+    os: requireFn("os"),
+    path: requireFn("path")
+  };
+}
+function toArrayBuffer(bytes) {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+function createTempHtmlPath(path2, os) {
+  const random = Math.random().toString(36).slice(2);
+  return path2.join(os.tmpdir(), `marknice-pdf-${Date.now()}-${random}.html`);
+}
+async function waitForPdfLayout(win) {
+  await win.webContents.executeJavaScript(`
+    (async () => {
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const imagePromises = Array.from(document.images)
+        .filter((img) => !img.complete)
+        .map((img) => new Promise((resolve) => {
+          const done = () => resolve(true);
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        }));
+
+      await Promise.race([Promise.all(imagePromises), wait(8000)]);
+      if (document.fonts && document.fonts.ready) {
+        await Promise.race([document.fonts.ready.catch(() => undefined), wait(3000)]);
+      }
+      await wait(200);
+      return true;
+    })();
+  `);
+}
+async function createPdfArrayBuffer(html2, title) {
+  const requireFn = getDesktopRequire();
+  const remote = getElectronRemote(requireFn);
+  const { fs, os, path: path2 } = getNodeHelpers(requireFn);
+  const htmlPath = createTempHtmlPath(path2, os);
+  const win = new remote.BrowserWindow({
+    show: false,
+    width: 900,
+    height: 1200,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  try {
+    await fs.writeFile(htmlPath, buildPrintableHtml(html2, title), "utf8");
+    await win.loadFile(htmlPath);
+    await waitForPdfLayout(win);
+    const pdfBytes = await win.webContents.printToPDF({
+      landscape: false,
+      pageSize: "A4",
+      preferCSSPageSize: true,
+      printBackground: true
+    });
+    return toArrayBuffer(pdfBytes);
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+    await fs.rm(htmlPath, { force: true });
+  }
 }
 
 // src/main.ts
@@ -20707,6 +20891,16 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
         if (!checking) void this.exportWordDocument(file);
+        return true;
+      }
+    });
+    this.addCommand({
+      id: "export-pdf-document",
+      name: "\u5BFC\u51FA\u5F53\u524D\u7B14\u8BB0\u4E3A PDF",
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.exportPdfDocument(file);
         return true;
       }
     });
@@ -20806,6 +21000,25 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
     } catch (err2) {
       console.error("[MarkNice WeChat] export Word failed", err2);
       new import_obsidian6.Notice(`\u5BFC\u51FA Word \u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
+    }
+  }
+  async exportPdfDocument(file) {
+    var _a2, _b2;
+    if (import_obsidian6.Platform.isMobile) {
+      new import_obsidian6.Notice("\u5BFC\u51FA PDF \u4EC5\u652F\u6301\u684C\u9762\u7AEF\uFF0C\u8BF7\u5728\u7535\u8111\u4E0A\u4F7F\u7528\u8BE5\u529F\u80FD\u3002");
+      return;
+    }
+    try {
+      new import_obsidian6.Notice("\u6B63\u5728\u751F\u6210 PDF \u6587\u6863...");
+      const result = await this.convert(file);
+      const pdf = await createPdfArrayBuffer(result.html, result.title);
+      const folder = (_b2 = (_a2 = file.parent) == null ? void 0 : _a2.path) != null ? _b2 : "";
+      const path2 = this.getAvailableVaultPath(folder, sanitizeFileBaseName(file.basename), "pdf");
+      const created = await this.app.vault.createBinary(path2, pdf);
+      new import_obsidian6.Notice(`\u5DF2\u5BFC\u51FA PDF \u6587\u6863\uFF1A${created.path}`);
+    } catch (err2) {
+      console.error("[MarkNice WeChat] export PDF failed", err2);
+      new import_obsidian6.Notice(`\u5BFC\u51FA PDF \u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
     }
   }
   pickWordFile() {

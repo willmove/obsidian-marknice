@@ -429,9 +429,52 @@ async function constrainImagesForWord(root: ParentNode): Promise<void> {
   }
 }
 
+function compactTablesForWord(root: ParentNode): void {
+  root.querySelectorAll<HTMLElement>('table').forEach((table) => {
+    let style = table.getAttribute('style') ?? '';
+    style = upsertStyle(style, 'border-collapse', 'collapse');
+    style = upsertStyle(style, 'width', '100%');
+    style = upsertStyle(style, 'margin', '8px 0');
+    table.setAttribute('style', style);
+  });
+
+  root.querySelectorAll<HTMLElement>('td, th').forEach((cell) => {
+    let style = cell.getAttribute('style') ?? '';
+    style = upsertStyle(style, 'padding', '3px 6px');
+    style = upsertStyle(style, 'mso-padding-alt', '2pt 4pt 2pt 4pt');
+    style = upsertStyle(style, 'line-height', '1.35');
+    style = upsertStyle(style, 'mso-line-height-rule', 'auto');
+    style = upsertStyle(style, 'vertical-align', 'middle');
+    cell.setAttribute('style', style);
+  });
+
+  root.querySelectorAll<HTMLElement>('td p, th p').forEach((paragraph) => {
+    let style = paragraph.getAttribute('style') ?? '';
+    style = upsertStyle(style, 'margin', '0');
+    style = upsertStyle(style, 'line-height', '1.35');
+    paragraph.setAttribute('style', style);
+  });
+
+  root.querySelectorAll<HTMLElement>('td ul, td ol, th ul, th ol').forEach((list) => {
+    let style = list.getAttribute('style') ?? '';
+    style = upsertStyle(style, 'margin', '0');
+    style = upsertStyle(style, 'padding-left', '18px');
+    style = upsertStyle(style, 'line-height', '1.35');
+    list.setAttribute('style', style);
+  });
+
+  root.querySelectorAll<HTMLElement>('td li, th li').forEach((item) => {
+    let style = item.getAttribute('style') ?? '';
+    style = upsertStyle(style, 'margin', '0');
+    style = upsertStyle(style, 'line-height', '1.35');
+    item.setAttribute('style', style);
+  });
+}
+
 async function prepareHtmlForWord(html: string): Promise<string> {
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
   normalizeGradientStylesForWord(doc.body);
+  compactTablesForWord(doc.body);
   // 公式降级为线性可读文本：Word 的 altChunk 不支持 MathML 与 KaTeX 的 CSS 定位，
   // mathml 输出还会因 <annotation> 导致重复，故导出前转成线性文本。
   rewriteMathForWord(doc.body);
@@ -470,8 +513,11 @@ export async function createWordDocumentBlob(html: string, title: string): Promi
     ul, ol { margin: 10px 0; padding-left: 24px; }
     li { margin: 6px 0; }
     blockquote { margin: 10px 0; padding: 8px 16px; border-left: 4px solid #ddd; background: #f8f8f8; color: #666; }
-    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-    td, th { border: 1px solid #ccc; padding: 6px 10px; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    td, th { border: 1px solid #ccc; padding: 3px 6px; line-height: 1.35; mso-padding-alt: 2pt 4pt 2pt 4pt; vertical-align: middle; }
+    td p, th p { margin: 0; line-height: 1.35; }
+    td ul, td ol, th ul, th ol { margin: 0; padding-left: 18px; line-height: 1.35; }
+    td li, th li { margin: 0; line-height: 1.35; }
     th { background: #f5f5f5; font-weight: bold; }
     pre { background: #f6f6f6; padding: 12px; border-radius: 4px; white-space: pre-wrap; }
     code { font-family: Consolas, Monaco, "Courier New", monospace; font-size: 13px; }
