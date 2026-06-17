@@ -20,12 +20,12 @@ export default class MarkNicePlugin extends Plugin {
 
     this.registerView(PREVIEW_VIEW_TYPE, (leaf) => new WechatPreviewView(leaf, this));
 
-    this.addRibbonIcon('newspaper', 'MarkNice：公众号排版预览', () => void this.activatePreview());
+    this.addRibbonIcon('newspaper', 'MarkNice：公众号排版预览', () => void this.openPreview());
 
     this.addCommand({
       id: 'open-preview',
       name: '打开公众号排版预览',
-      callback: () => void this.activatePreview(),
+      callback: () => void this.openPreview(),
     });
 
     this.addCommand({
@@ -155,7 +155,7 @@ export default class MarkNicePlugin extends Plugin {
       const created = await this.app.vault.create(path, markdown);
       await this.app.workspace.getLeaf(true).openFile(created);
       new Notice(`已导入 Word 文档：${created.path}`);
-      await this.activatePreview();
+      await this.openPreview();
     } catch (err) {
       console.error('[MarkNice WeChat] import Word failed', err);
       new Notice(`导入 Word 失败：${err instanceof Error ? err.message : String(err)}`);
@@ -216,11 +216,23 @@ export default class MarkNicePlugin extends Plugin {
     return candidate;
   }
 
+  async openPreview(): Promise<void> {
+    try {
+      await this.activatePreview();
+    } catch (err) {
+      console.error('[MarkNice WeChat] open preview failed', err);
+      new Notice(`打开 MarkNice 预览失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   async activatePreview(): Promise<void> {
+    const file = this.getActiveMarkdownFile();
     const existing = this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE);
     let leaf: WorkspaceLeaf | null = existing[0] ?? null;
     if (!leaf) {
-      leaf = Platform.isMobile ? this.app.workspace.getLeaf('tab') : this.app.workspace.getRightLeaf(false);
+      leaf = Platform.isMobile
+        ? this.app.workspace.getLeaf('tab')
+        : this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf('split', 'vertical');
       if (!leaf) {
         new Notice('无法打开 MarkNice 预览视图');
         return;
@@ -232,13 +244,15 @@ export default class MarkNicePlugin extends Plugin {
     }
     await this.revealLeaf(leaf);
 
-    const file = this.getActiveMarkdownFile();
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
   }
 
   private async revealLeaf(leaf: WorkspaceLeaf): Promise<void> {
-    this.app.workspace.setActiveLeaf(leaf, false, true);
+    if (!Platform.isMobile && this.app.workspace.rightSplit.collapsed) {
+      this.app.workspace.rightSplit.expand();
+    }
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
 
   refreshPreview(): void {

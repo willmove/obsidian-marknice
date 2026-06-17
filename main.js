@@ -20669,11 +20669,11 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
   async onload() {
     await this.loadSettings();
     this.registerView(PREVIEW_VIEW_TYPE, (leaf) => new WechatPreviewView(leaf, this));
-    this.addRibbonIcon("newspaper", "MarkNice\uFF1A\u516C\u4F17\u53F7\u6392\u7248\u9884\u89C8", () => void this.activatePreview());
+    this.addRibbonIcon("newspaper", "MarkNice\uFF1A\u516C\u4F17\u53F7\u6392\u7248\u9884\u89C8", () => void this.openPreview());
     this.addCommand({
       id: "open-preview",
       name: "\u6253\u5F00\u516C\u4F17\u53F7\u6392\u7248\u9884\u89C8",
-      callback: () => void this.activatePreview()
+      callback: () => void this.openPreview()
     });
     this.addCommand({
       id: "copy-as-wechat",
@@ -20787,7 +20787,7 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       const created = await this.app.vault.create(path2, markdown);
       await this.app.workspace.getLeaf(true).openFile(created);
       new import_obsidian6.Notice(`\u5DF2\u5BFC\u5165 Word \u6587\u6863\uFF1A${created.path}`);
-      await this.activatePreview();
+      await this.openPreview();
     } catch (err2) {
       console.error("[MarkNice WeChat] import Word failed", err2);
       new import_obsidian6.Notice(`\u5BFC\u5165 Word \u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
@@ -20846,12 +20846,21 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
     }
     return candidate;
   }
+  async openPreview() {
+    try {
+      await this.activatePreview();
+    } catch (err2) {
+      console.error("[MarkNice WeChat] open preview failed", err2);
+      new import_obsidian6.Notice(`\u6253\u5F00 MarkNice \u9884\u89C8\u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
+    }
+  }
   async activatePreview() {
-    var _a2;
+    var _a2, _b2;
+    const file = this.getActiveMarkdownFile();
     const existing = this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE);
     let leaf = (_a2 = existing[0]) != null ? _a2 : null;
     if (!leaf) {
-      leaf = import_obsidian6.Platform.isMobile ? this.app.workspace.getLeaf("tab") : this.app.workspace.getRightLeaf(false);
+      leaf = import_obsidian6.Platform.isMobile ? this.app.workspace.getLeaf("tab") : (_b2 = this.app.workspace.getRightLeaf(false)) != null ? _b2 : this.app.workspace.getLeaf("split", "vertical");
       if (!leaf) {
         new import_obsidian6.Notice("\u65E0\u6CD5\u6253\u5F00 MarkNice \u9884\u89C8\u89C6\u56FE");
         return;
@@ -20861,12 +20870,14 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
     await this.revealLeaf(leaf);
-    const file = this.getActiveMarkdownFile();
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
   }
   async revealLeaf(leaf) {
-    this.app.workspace.setActiveLeaf(leaf, false, true);
+    if (!import_obsidian6.Platform.isMobile && this.app.workspace.rightSplit.collapsed) {
+      this.app.workspace.rightSplit.expand();
+    }
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
   refreshPreview() {
     for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE)) {
