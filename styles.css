@@ -26,6 +26,10 @@
   --mn-line: #38362f;
 }
 
+.mn-file-input-hidden {
+  display: none;
+}
+
 /* ---------------- 预览视图 ---------------- */
 
 .mn-view {

@@ -182,7 +182,7 @@ export default class MarkNicePlugin extends Plugin {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = DOCX_ACCEPT;
-      input.style.display = 'none';
+      input.classList.add('mn-file-input-hidden');
       let finished = false;
 
       const finish = (file: File | null): void => {
@@ -238,13 +238,6 @@ export default class MarkNicePlugin extends Plugin {
   }
 
   private async revealLeaf(leaf: WorkspaceLeaf): Promise<void> {
-    const workspace = this.app.workspace as typeof this.app.workspace & {
-      revealLeaf?: (leaf: WorkspaceLeaf) => Promise<void>;
-    };
-    if (workspace.revealLeaf) {
-      await workspace.revealLeaf(leaf);
-      return;
-    }
     this.app.workspace.setActiveLeaf(leaf, false, true);
   }
 

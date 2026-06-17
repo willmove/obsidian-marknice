@@ -30161,7 +30161,7 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = DOCX_ACCEPT;
-      input.style.display = "none";
+      input.classList.add("mn-file-input-hidden");
       let finished = false;
       const finish = (file) => {
         if (finished) return;
@@ -30214,11 +30214,6 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
     if (file && view instanceof WechatPreviewView) view.setFile(file);
   }
   async revealLeaf(leaf) {
-    const workspace = this.app.workspace;
-    if (workspace.revealLeaf) {
-      await workspace.revealLeaf(leaf);
-      return;
-    }
     this.app.workspace.setActiveLeaf(leaf, false, true);
   }
   refreshPreview() {
