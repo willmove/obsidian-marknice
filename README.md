@@ -1,251 +1,210 @@
-# MarkNice WeChat — Obsidian 公众号排版插件
+# MarkNice WeChat
 
-中文 | [English](#english)
+MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当前 Markdown 笔记转换为适合微信公众号编辑器的内联样式 HTML，并提供实时预览、一键复制、直接发送到公众号草稿箱、Word 导入导出等能力。
 
-把 Obsidian 笔记一键变成漂亮的微信公众号文章：**多主题排版 → 实时预览 → 一键复制 / 直接发草稿**。
+- 当前版本：`0.6.1`
+- 最低 Obsidian 版本：`1.5.0`
 
-> 本项目由原 OpenClaw Skill（marknice-wechat）重构而来，现在是一个完整的 Obsidian 插件。
+## 功能特性
 
-## 功能
-
-- **实时预览**：右侧面板按公众号实际效果渲染当前笔记，编辑自动刷新
-- **双预览模式**：手机模式（375px 手机画框，模拟读者实际所见）/ 桌面模式 一键切换
-- **16 套主题**：Claude 暖陶（Anthropic 风格）、经典蓝、杂志衬线、极简黑白、靛粉渐变、极客深色、优雅棕、活力红、琥珀橙、清新绿、健康绿、杂志红、复古纸、夜空蓝、梦幻紫、海盐青
-- **数学公式渲染**：基于 KaTeX 渲染行内 `$E=mc^2# MarkNice WeChat — Obsidian 公众号排版插件
-
-中文 | [English](#english)
-
-把 Obsidian 笔记一键变成漂亮的微信公众号文章：**多主题排版 → 实时预览 → 一键复制 / 直接发草稿**。
-
-> 本项目由原 OpenClaw Skill（marknice-wechat）重构而来，现在是一个完整的 Obsidian 插件。
-
- 与块级 `$\int_0^1 x\,dx$` 公式，支持希腊字母、分数、根号、上下标、矩阵等
-- **Word 导入 / 导出**：一键将笔记导出为 `.docx`（图片自动适配宽度），或把 `.docx` 导入为 Markdown 笔记
-- **字号 / 段距微调**：在主题基础上整体增减字号（±6px）与段落间距（−16~+24px），预览、复制、发草稿全程生效
-- **一键复制**：所有样式内联写入 `style` 属性，粘贴进公众号编辑器排版不乱
-- **一键发草稿**：直接调用公众号接口创建草稿，自动上传封面与正文图片（本地图、`![[wiki 嵌入]]`、远程图都会转成微信图床链接）
-- **Obsidian 语法友好**：支持 `![[图片嵌入]]`、`[[双链]]`（降级为纯文本）、`==高亮==`、Callout、任务列表、表格、代码块
-
-> **关于 Word 导出中的公式**：Word 的 HTML 导入通道（altChunk）不支持 MathML，也无法还原 KaTeX 的 CSS 定位排版，因此导出 Word 时公式会降级为可读的线性文本（如 `\frac{a+b}{c+d}` → `(a+b)/(c+d)`、`\sqrt{x^2+y^2}` → `√(x²+y²)`），保证信息在任何 Word 版本中都正确无误。预览与复制仍使用渲染后的公式。
+- **公众号排版预览**：在 Obsidian 中打开右侧预览面板，按最终公众号样式渲染当前笔记，编辑后自动刷新。
+- **桌面 / 手机预览模式**：支持桌面宽度预览，也支持 375px 手机视图，便于检查移动端阅读效果。
+- **16 套排版主题**：内置 Claude 暖陶、经典蓝、杂志衬线、极简黑白、靛粉渐变、极客深色、优雅棕、活力红、琥珀橙、清新绿、健康绿、杂志红、复古纸、夜空蓝、梦幻紫、海盐青。
+- **字号与段距微调**：可在主题默认样式基础上调整字号和段落间距，设置会同步影响预览、复制和发草稿。
+- **一键复制到公众号编辑器**：复制时写入 `text/html` 和 `text/plain`，样式全部内联到 `style` 属性，粘贴到公众号编辑器后尽量保持排版不变。
+- **发送到公众号草稿箱**：通过微信公众号接口上传封面和正文图片，并创建草稿。
+- **Word 导入 / 导出**：可把 `.docx` 导入为 Markdown，也可把当前笔记导出为 `.docx`。
+- **数学公式渲染**：使用 KaTeX 渲染行内公式 `$E=mc^2$` 与块级公式 `$$...$$`。
+- **Obsidian 语法适配**：支持图片嵌入、双链降级、高亮、Callout、任务列表、表格、代码块等常见写法。
 
 ## 安装
 
-在 Obsidian 社区插件市场搜索 **MarkNice WeChat** 直接安装，或手动安装：
+### 从社区插件安装
 
-1. 在你的库中创建目录 `<vault>/.obsidian/plugins/marknice-wechat/`
-2. 把 `main.js`、`manifest.json`、`styles.css` 三个文件复制进去
-3. 在 Obsidian「设置 → 第三方插件」中启用 **MarkNice WeChat**
+在 Obsidian 社区插件市场搜索 **MarkNice WeChat**，安装并启用插件。
 
-从源码构建：
+### 手动安装
 
-```bash
-npm install
-npm run build   # 产出 main.js
-```
+1. 在目标库中创建插件目录：
 
-## 使用
+   ```text
+   <vault>/.obsidian/plugins/marknice-wechat/
+   ```
 
-### 1. 预览与切换主题
+2. 将以下文件复制到该目录：
 
-点击左侧栏的 📰 图标，或命令面板执行「**打开公众号排版预览**」。预览面板顶部可随时切换主题；第二行工具栏可微调字号（−/+，每档 1px）与段距（−/+，每档 2px），并在 🖥 桌面 / 📱 手机 两种预览模式间切换。这些调整会持久保存，并同样作用于复制与发草稿的最终排版。
+   ```text
+   main.js
+   manifest.json
+   styles.css
+   ```
 
-### 2. 一键复制
+3. 在 Obsidian 中进入「设置 -> 第三方插件」，启用 **MarkNice WeChat**。
 
-预览面板点「复制」，或命令面板执行「**复制为公众号格式**」，然后到公众号编辑器里 `Ctrl/Cmd+V` 直接粘贴。本地图片会内联为 base64，粘贴后由编辑器自动转存。
+## 使用方式
 
-### 3. 发送到草稿箱
+### 打开排版预览
 
-先在「设置 → MarkNice WeChat」填好：
+可以通过以下任一方式打开预览：
 
-- **WeChat App ID** / **WeChat App Secret**（公众平台 → 设置与开发 → 基本配置）
+- 点击左侧栏的 **MarkNice: 公众号排版预览** 图标。
+- 在命令面板执行 **打开公众号排版预览**。
 
-然后点预览面板的「发草稿」或执行命令「**发送到公众号草稿箱**」。弹窗中确认标题、作者、摘要、封面图（必填，可从库中选图）后发送。流程：获取凭证 → 上传封面 → 逐张上传正文图片 → 创建草稿。
+预览面板会跟随当前打开的 Markdown 文件。顶部工具栏支持切换主题、导入 Word、导出 Word、复制和发送草稿；第二行工具栏支持调整字号、段距和预览模式。
 
-> **注意**
-> - 公众号接口要求把你的出口 IP 加入 **IP 白名单**（公众平台 → 基本配置），否则报错 40164。
-> - 草稿箱 / 素材接口需要 **已认证** 的公众号。
-> - AppSecret 仅保存在本地库的插件数据（`data.json`）中，不会上传。
+### 复制为公众号格式
 
-### Frontmatter 支持
+打开 Markdown 笔记后，可以：
 
-笔记的 frontmatter 字段会自动作为草稿默认值：
+- 在预览面板点击 **复制**。
+- 或在命令面板执行 **复制为公众号格式（可直接粘贴到草稿编辑器）**。
+
+然后到微信公众号后台编辑器中直接粘贴。桌面端会优先复制富文本 HTML；如果当前环境不支持富文本剪贴板，会退回复制纯文本。
+
+### 发送到公众号草稿箱
+
+发送草稿前，需要先在「设置 -> MarkNice WeChat」中填写：
+
+- **WeChat App ID**
+- **WeChat App Secret**
+
+配置完成后，可以在预览面板点击 **发草稿**，或在命令面板执行 **发送到公众号草稿箱**。弹窗中可确认标题、作者、摘要和封面图，随后插件会执行以下流程：
+
+1. 获取微信公众号接口凭证。
+2. 上传封面图。
+3. 上传正文中的图片并替换为微信图床地址。
+4. 创建公众号草稿。
+
+注意事项：
+
+- 微信公众号接口要求将当前出口 IP 加入 **IP 白名单**，否则可能返回 `40164`。
+- 草稿箱和素材接口通常要求公众号已认证。
+- `AppSecret` 仅保存到当前 Obsidian 库的插件数据中，不会由插件主动上传到第三方服务。
+- 封面图为微信草稿必填项，可使用库内图片路径或 `https` 图片链接。
+
+### Word 导入与导出
+
+- **导入 Word 文档为 Markdown**：选择本地 `.docx` 文件，插件会在当前目录或活动文件所在目录创建对应 Markdown 文件，并自动打开预览。
+- **导出当前笔记为 Word 文档**：将当前 Markdown 笔记转换为 `.docx`，文件会保存到当前笔记所在目录，若重名会自动追加序号。
+
+关于公式导出：Word 的 HTML 导入链路无法稳定还原 KaTeX 的排版结构，因此导出 Word 时公式会转换为线性可读文本，例如 `\frac{a+b}{c+d}` 会转换为 `(a+b)/(c+d)`。公众号预览与复制仍使用 KaTeX 渲染后的公式。
+
+## Frontmatter
+
+插件会读取笔记 frontmatter，用于预填发布弹窗：
 
 ```yaml
 ---
-title: 文章标题        # 缺省用文件名
-author: 作者名         # 缺省用设置中的默认作者
-digest: 分享卡片摘要    # 缺省截取正文开头
-cover: assets/封面.png # 库内路径或 https 链接，缺省用文中第一张图
+title: 文章标题        # 缺省使用文件名
+author: 作者名         # 缺省使用插件设置中的默认作者
+digest: 分享摘要       # 也支持 description；缺省截取正文开头
+cover: assets/cover.png # 库内图片路径或 https 图片链接
 ---
 ```
+
+字段说明：
+
+| 字段 | 用途 | 备注 |
+| --- | --- | --- |
+| `title` | 公众号草稿标题 | 最多 64 个字符 |
+| `author` | 作者 | frontmatter 优先于插件默认作者 |
+| `digest` | 分享摘要 | 最多 120 字 |
+| `description` | 分享摘要 | 当 `digest` 不存在时作为备选 |
+| `cover` | 封面图 | 支持库内路径或远程图片 URL |
+
+## 支持的 Markdown 与 Obsidian 语法
+
+| 类型 | 支持情况 |
+| --- | --- |
+| 标题、段落、列表、引用、分隔线 | 支持并转换为内联样式 |
+| 表格 | 支持基础表格样式 |
+| 代码块、行内代码 | 支持，代码块会保留换行和空格 |
+| 加粗、斜体、删除线 | 支持 |
+| `==高亮==` | 转换为 `<mark>` |
+| `![[图片.png]]` | 解析为库内图片并转换为 data URL |
+| `[[双链]]` | 降级为纯文本 |
+| Callout | 按引用块样式处理，并强化标题行 |
+| 任务列表 | 复选框会转换为文本符号 |
+| 行内公式 `$...$` | 使用 KaTeX 渲染 |
+| 块级公式 `$$...$$` | 使用 KaTeX 渲染 |
+
+## 图片处理
+
+- 复制到公众号编辑器时，库内图片会转为 data URL，粘贴后由公众号编辑器自行处理。
+- 发送草稿时，封面图会通过临时素材接口上传，正文图片会逐张上传到微信并替换为微信图床地址。
+- 支持常见图片格式：`png`、`jpg`、`jpeg`、`gif`、`webp`、`bmp`、`svg`。
+- 发布草稿选择封面时，库内选择器会排除 `svg`，以避免微信封面接口兼容性问题。
+
+## 开发
+
+安装依赖：
+
+```bash
+npm install
+```
+
+开发构建：
+
+```bash
+npm run dev
+```
+
+生产构建：
+
+```bash
+npm run build
+```
+
+构建脚本会先执行 TypeScript 类型检查，再通过 esbuild 输出 `main.js`。
 
 ## 项目结构
 
 ```text
-marknice-obsidian/
-├── manifest.json        # 插件清单
-├── main.js              # 构建产物（esbuild 打包）
-├── styles.css           # 界面样式（Anthropic 风格）
-├── src/
-│   ├── main.ts          # 插件入口：命令、视图注册
-│   ├── converter.ts     # Markdown → 公众号内联样式 HTML
-│   ├── themes.ts        # 16 套排版主题
-│   ├── math.ts          # KaTeX 公式渲染 + Word 导出线性化
-│   ├── word.ts          # Word 导入 / 导出
-│   ├── docx-parser.ts   # .docx 解析
-│   ├── html-to-markdown.ts # HTML → Markdown（Word 导入用）
-│   ├── wechat-api.ts    # 公众号接口客户端（token / 上传 / 草稿）
-│   ├── preview-view.ts  # 右侧预览面板
-│   ├── publish-modal.ts # 发草稿弹窗
-│   └── settings.ts      # 设置页
-├── esbuild.config.mjs
-├── tsconfig.json
-└── package.json
+obsidian-marknice/
+├── manifest.json          # Obsidian 插件清单
+├── main.js                # 构建产物
+├── styles.css             # 插件界面样式
+├── package.json           # 依赖与脚本
+├── versions.json          # Obsidian 插件版本映射
+├── docs/                  # 发布说明与社区插件提交材料
+└── src/
+    ├── main.ts            # 插件入口、命令注册、视图注册
+    ├── preview-view.ts    # 公众号排版预览面板
+    ├── settings.ts        # 插件设置页
+    ├── converter.ts       # Markdown 到公众号 HTML 的转换逻辑
+    ├── themes.ts          # 内置排版主题
+    ├── math.ts            # 公式解析、渲染与 Word 导出降级
+    ├── publish-modal.ts   # 发送草稿弹窗
+    ├── wechat-api.ts      # 微信公众号接口客户端
+    ├── word.ts            # Word 导入 / 导出
+    ├── docx-parser.ts     # .docx 解析
+    ├── html-to-markdown.ts # HTML 到 Markdown 转换
+    └── vendor.d.ts        # 第三方库类型声明
 ```
+
+## 技术栈
+
+- Obsidian Plugin API
+- TypeScript
+- esbuild
+- marked
+- KaTeX
+- html-docx-js
+- JSZip
+
+## 已知限制
+
+- 微信公众号编辑器会过滤部分 HTML、CSS 和交互能力，因此插件会尽量使用内联样式和基础结构保证兼容性。
+- 移动端或部分系统环境可能不支持写入富文本剪贴板，此时复制功能会退回纯文本。
+- Word 导出中的公式会转换为线性文本，以优先保证内容正确。
+- 非图片类型的 Obsidian 嵌入无法在公众号中等价表达，会降级为文本。
+
+## English Summary
+
+MarkNice WeChat is an Obsidian plugin for converting Markdown notes into WeChat Official Account articles. It provides themed formatting, live preview, rich-text copy, direct draft publishing through the WeChat API, Word import/export, KaTeX math rendering, and compatibility handling for common Obsidian syntax.
+
+Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/marknice-wechat/`, then enable the plugin in Obsidian.
 
 ## License
 
 [MIT](LICENSE)
-
----
-
-## English
-
-Turn Obsidian notes into polished WeChat Official Account articles: **themed formatting → live preview → one-click copy / direct draft publishing**.
-
-### Features
-
-- **Live preview** panel that renders the active note exactly as it will appear in WeChat, refreshing as you type
-- **Phone & desktop preview modes** — phone mode wraps the preview in a 375px device frame to mirror what readers actually see
-- **16 themes**, including a Claude-inspired warm-clay style and a clean health-green style
-- **Math formula rendering** — KaTeX-powered inline (`$E=mc^2# MarkNice WeChat — Obsidian 公众号排版插件
-
-中文 | [English](#english)
-
-把 Obsidian 笔记一键变成漂亮的微信公众号文章：**多主题排版 → 实时预览 → 一键复制 / 直接发草稿**。
-
-> 本项目由原 OpenClaw Skill（marknice-wechat）重构而来，现在是一个完整的 Obsidian 插件。
-
-## 功能
-
-- **实时预览**：右侧面板按公众号实际效果渲染当前笔记，编辑自动刷新
-- **双预览模式**：手机模式（375px 手机画框，模拟读者实际所见）/ 桌面模式 一键切换
-- **16 套主题**：Claude 暖陶（Anthropic 风格）、经典蓝、杂志衬线、极简黑白、靛粉渐变、极客深色、优雅棕、活力红、琥珀橙、清新绿、健康绿、杂志红、复古纸、夜空蓝、梦幻紫、海盐青
-- **数学公式渲染**：基于 KaTeX 渲染行内 `$E=mc^2# MarkNice WeChat — Obsidian 公众号排版插件
-
-中文 | [English](#english)
-
-把 Obsidian 笔记一键变成漂亮的微信公众号文章：**多主题排版 → 实时预览 → 一键复制 / 直接发草稿**。
-
-> 本项目由原 OpenClaw Skill（marknice-wechat）重构而来，现在是一个完整的 Obsidian 插件。
-
- 与块级 `$\int_0^1 x\,dx$` 公式，支持希腊字母、分数、根号、上下标、矩阵等
-- **Word 导入 / 导出**：一键将笔记导出为 `.docx`（图片自动适配宽度），或把 `.docx` 导入为 Markdown 笔记
-- **字号 / 段距微调**：在主题基础上整体增减字号（±6px）与段落间距（−16~+24px），预览、复制、发草稿全程生效
-- **一键复制**：所有样式内联写入 `style` 属性，粘贴进公众号编辑器排版不乱
-- **一键发草稿**：直接调用公众号接口创建草稿，自动上传封面与正文图片（本地图、`![[wiki 嵌入]]`、远程图都会转成微信图床链接）
-- **Obsidian 语法友好**：支持 `![[图片嵌入]]`、`[[双链]]`（降级为纯文本）、`==高亮==`、Callout、任务列表、表格、代码块
-
-> **关于 Word 导出中的公式**：Word 的 HTML 导入通道（altChunk）不支持 MathML，也无法还原 KaTeX 的 CSS 定位排版，因此导出 Word 时公式会降级为可读的线性文本（如 `\frac{a+b}{c+d}` → `(a+b)/(c+d)`、`\sqrt{x^2+y^2}` → `√(x²+y²)`），保证信息在任何 Word 版本中都正确无误。预览与复制仍使用渲染后的公式。
-
-## 安装
-
-在 Obsidian 社区插件市场搜索 **MarkNice WeChat** 直接安装，或手动安装：
-
-1. 在你的库中创建目录 `<vault>/.obsidian/plugins/marknice-wechat/`
-2. 把 `main.js`、`manifest.json`、`styles.css` 三个文件复制进去
-3. 在 Obsidian「设置 → 第三方插件」中启用 **MarkNice WeChat**
-
-从源码构建：
-
-```bash
-npm install
-npm run build   # 产出 main.js
-```
-
-## 使用
-
-### 1. 预览与切换主题
-
-点击左侧栏的 📰 图标，或命令面板执行「**打开公众号排版预览**」。预览面板顶部可随时切换主题；第二行工具栏可微调字号（−/+，每档 1px）与段距（−/+，每档 2px），并在 🖥 桌面 / 📱 手机 两种预览模式间切换。这些调整会持久保存，并同样作用于复制与发草稿的最终排版。
-
-### 2. 一键复制
-
-预览面板点「复制」，或命令面板执行「**复制为公众号格式**」，然后到公众号编辑器里 `Ctrl/Cmd+V` 直接粘贴。本地图片会内联为 base64，粘贴后由编辑器自动转存。
-
-### 3. 发送到草稿箱
-
-先在「设置 → MarkNice WeChat」填好：
-
-- **WeChat App ID** / **WeChat App Secret**（公众平台 → 设置与开发 → 基本配置）
-
-然后点预览面板的「发草稿」或执行命令「**发送到公众号草稿箱**」。弹窗中确认标题、作者、摘要、封面图（必填，可从库中选图）后发送。流程：获取凭证 → 上传封面 → 逐张上传正文图片 → 创建草稿。
-
-> **注意**
-> - 公众号接口要求把你的出口 IP 加入 **IP 白名单**（公众平台 → 基本配置），否则报错 40164。
-> - 草稿箱 / 素材接口需要 **已认证** 的公众号。
-> - AppSecret 仅保存在本地库的插件数据（`data.json`）中，不会上传。
-
-### Frontmatter 支持
-
-笔记的 frontmatter 字段会自动作为草稿默认值：
-
-```yaml
----
-title: 文章标题        # 缺省用文件名
-author: 作者名         # 缺省用设置中的默认作者
-digest: 分享卡片摘要    # 缺省截取正文开头
-cover: assets/封面.png # 库内路径或 https 链接，缺省用文中第一张图
----
-```
-
-## 项目结构
-
-```text
-marknice-obsidian/
-├── manifest.json        # 插件清单
-├── main.js              # 构建产物（esbuild 打包）
-├── styles.css           # 界面样式（Anthropic 风格）
-├── src/
-│   ├── main.ts          # 插件入口：命令、视图注册
-│   ├── converter.ts     # Markdown → 公众号内联样式 HTML
-│   ├── themes.ts        # 16 套排版主题
-│   ├── math.ts          # KaTeX 公式渲染 + Word 导出线性化
-│   ├── word.ts          # Word 导入 / 导出
-│   ├── docx-parser.ts   # .docx 解析
-│   ├── html-to-markdown.ts # HTML → Markdown（Word 导入用）
-│   ├── wechat-api.ts    # 公众号接口客户端（token / 上传 / 草稿）
-│   ├── preview-view.ts  # 右侧预览面板
-│   ├── publish-modal.ts # 发草稿弹窗
-│   └── settings.ts      # 设置页
-├── esbuild.config.mjs
-├── tsconfig.json
-└── package.json
-```
-
-## License
-
-[MIT](LICENSE)
-
----
-
-## English
-
-Turn Obsidian notes into polished WeChat Official Account articles: **themed formatting → live preview → one-click copy / direct draft publishing**.
-
-) and block (`$\int_0^1 x\,dx$`) formulas, with Greek letters, fractions, roots, super/subscripts, matrices, and more
-- **Word import / export** — export the active note to a `.docx` (images auto-fit to content width), or import a `.docx` as a Markdown note
-- **Font size & paragraph spacing tuning** (±6px / −16~+24px) applied consistently to preview, copy, and draft publishing
-- **One-click copy** — every style is inlined into `style` attributes, so pasting into the WeChat editor never breaks the layout
-- **Publish to draft box** via the official API: cover and body images (local files, `![[wiki embeds]]`, remote URLs) are uploaded to WeChat hosting automatically
-- Handles Obsidian syntax: image embeds, wikilinks (flattened to text), `==highlight==`, callouts, task lists, tables, code blocks
-
-> **Note on formulas in Word export:** Word's HTML import path (altChunk) supports neither MathML nor KaTeX's CSS-based positioning, so formulas are converted to readable linear text on Word export (e.g. `\frac{a+b}{c+d}` → `(a+b)/(c+d)`, `\sqrt{x^2+y^2}` → `√(x²+y²)`) to keep them correct in every Word version. Preview and copy still use the rendered formulas.
-
-### Install
-
-Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/marknice-wechat/`, then enable the plugin. To build from source, run `npm install && npm run build`.
-
-### Setup for publishing
-
-Enter your **App ID** and **App Secret** in the plugin settings (WeChat MP console → Settings & Development → Basic Configuration). Note that the WeChat API requires your IP to be whitelisted, and the draft/material APIs require a verified account. Frontmatter keys `title`, `author`, `digest`, and `cover` pre-fill the publish dialog.
