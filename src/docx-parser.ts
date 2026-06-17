@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import { unzipArrayBuffer, zipBase64, zipText } from './zip-utils';
 
 type NumberLevel = {
   numFmt: string;
@@ -264,15 +264,15 @@ function isRawSegment(segment: Segment): segment is RawSegment {
 }
 
 export async function parseDocx(arrayBuffer: ArrayBuffer): Promise<string> {
-  const zip = await JSZip.loadAsync(arrayBuffer);
+  const zip = unzipArrayBuffer(arrayBuffer);
 
   const abstractNums: Record<string, Record<string, NumberLevel>> = {};
   const numToAbstract: Record<string, string> = {};
   const numOverrides: Record<string, Record<string, { start: number }>> = {};
 
-  const numberingFile = zip.file('word/numbering.xml');
-  if (numberingFile) {
-    const numberingDoc = parseXml(await numberingFile.async('string'));
+  const numberingXml = zipText(zip, 'word/numbering.xml');
+  if (numberingXml) {
+    const numberingDoc = parseXml(numberingXml);
     qnDeep(numberingDoc, 'abstractNum').forEach((abstractNum) => {
       const id = attr(abstractNum, 'abstractNumId');
       const levels: Record<string, NumberLevel> = {};
@@ -304,9 +304,9 @@ export async function parseDocx(arrayBuffer: ArrayBuffer): Promise<string> {
 
   const styleNumIds: Record<string, { numId: string; ilvl: string }> = {};
   const styleOutlineLevel: Record<string, number> = {};
-  const stylesFile = zip.file('word/styles.xml');
-  if (stylesFile) {
-    const stylesDoc = parseXml(await stylesFile.async('string'));
+  const stylesXml = zipText(zip, 'word/styles.xml');
+  if (stylesXml) {
+    const stylesDoc = parseXml(stylesXml);
     qnDeep(stylesDoc, 'style').forEach((style) => {
       const styleId = attr(style, 'styleId');
       const pPr = qn(style, 'pPr');
@@ -328,9 +328,9 @@ export async function parseDocx(arrayBuffer: ArrayBuffer): Promise<string> {
   }
 
   const rels: Record<string, string> = {};
-  const relsFile = zip.file('word/_rels/document.xml.rels');
-  if (relsFile) {
-    const relsDoc = parseXml(await relsFile.async('string'));
+  const relsXml = zipText(zip, 'word/_rels/document.xml.rels');
+  if (relsXml) {
+    const relsDoc = parseXml(relsXml);
     qnDeep(relsDoc, 'Relationship').forEach((rel) => {
       const id = rel.getAttribute('Id') || '';
       const target = rel.getAttribute('Target') || '';
@@ -342,9 +342,8 @@ export async function parseDocx(arrayBuffer: ArrayBuffer): Promise<string> {
     const target = rels[rId];
     if (!target || /^https?:\/\//i.test(target)) return target || '';
     const zipPath = target.startsWith('/') ? target.slice(1) : normalizeZipPath(`word/${target}`);
-    const imageFile = zip.file(zipPath);
-    if (!imageFile) return '';
-    const base64 = await imageFile.async('base64');
+    const base64 = zipBase64(zip, zipPath);
+    if (!base64) return '';
     const ext = (target.split(/[?#]/)[0].split('.').pop() || '').toLowerCase();
     const mime: Record<string, string> = {
       png: 'image/png',
@@ -358,9 +357,9 @@ export async function parseDocx(arrayBuffer: ArrayBuffer): Promise<string> {
     return `data:${mime[ext] || 'image/png'};base64,${base64}`;
   }
 
-  const documentFile = zip.file('word/document.xml');
-  if (!documentFile) return '<p>Unable to read document content</p>';
-  const documentDoc = parseXml(await documentFile.async('string'));
+  const documentXml = zipText(zip, 'word/document.xml');
+  if (!documentXml) return '<p>Unable to read document content</p>';
+  const documentDoc = parseXml(documentXml);
   const body = qn(documentDoc.documentElement, 'body');
   if (!body) return '<p>Unable to read document content</p>';
 

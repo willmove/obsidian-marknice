@@ -1,9 +1,10 @@
-import htmlDocx from 'html-docx-js/dist/html-docx';
 import { parseDocx } from './docx-parser';
 import { htmlToMarkdown } from './html-to-markdown';
 import { rewriteMathForWord } from './math';
+import { createZipBlob } from './zip-utils';
 
 const WORD_CONTENT_MAX_WIDTH_PX = 560;
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 function escapeHtml(str = ''): string {
   return str
@@ -11,6 +12,119 @@ function escapeHtml(str = ''): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function createDocumentXml(): string {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:ns6="http://schemas.openxmlformats.org/schemaLibrary/2006/main"
+  xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+  xmlns:ns8="http://schemas.openxmlformats.org/drawingml/2006/chartDrawing"
+  xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram"
+  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+  xmlns:ns11="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+  xmlns:dsp="http://schemas.microsoft.com/office/drawing/2008/diagram"
+  xmlns:ns13="urn:schemas-microsoft-com:office:excel"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:v="urn:schemas-microsoft-com:vml"
+  xmlns:w10="urn:schemas-microsoft-com:office:word"
+  xmlns:ns17="urn:schemas-microsoft-com:office:powerpoint"
+  xmlns:odx="http://opendope.org/xpaths"
+  xmlns:odc="http://opendope.org/conditions"
+  xmlns:odq="http://opendope.org/questions"
+  xmlns:odi="http://opendope.org/components"
+  xmlns:odgm="http://opendope.org/SmartArt/DataHierarchy"
+  xmlns:ns24="http://schemas.openxmlformats.org/officeDocument/2006/bibliography"
+  xmlns:ns25="http://schemas.openxmlformats.org/drawingml/2006/compatibility"
+  xmlns:ns26="http://schemas.openxmlformats.org/drawingml/2006/lockedCanvas">
+  <w:body>
+    <w:altChunk r:id="htmlChunk" />
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840" w:orient="portrait" />
+      <w:pgMar w:top="1440"
+               w:right="1440"
+               w:bottom="1440"
+               w:left="1440"
+               w:header="720"
+               w:footer="720"
+               w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
+`;
+}
+
+function createMhtDocument(htmlSource: string): string {
+  const contentParts: string[] = [];
+  const htmlWithImageLocations = htmlSource.replace(
+    /"data:([^;"]+);([^,"]+),([^"]+)"/g,
+    (_match, contentType: string, contentEncoding: string, encodedContent: string) => {
+      const extension = contentType.split('/')[1]?.replace(/[^\w-].*$/, '') || 'bin';
+      const contentLocation = `file:///C:/fake/image${contentParts.length}.${extension}`;
+      contentParts.push(`------=mhtDocumentPart
+Content-Type: ${contentType}
+Content-Transfer-Encoding: ${contentEncoding}
+Content-Location: ${contentLocation}
+
+${encodedContent}
+`);
+      return `"${contentLocation}"`;
+    }
+  );
+
+  return `MIME-Version: 1.0
+Content-Type: multipart/related;
+    type="text/html";
+    boundary="----=mhtDocumentPart"
+
+
+------=mhtDocumentPart
+Content-Type: text/html;
+    charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+Content-Location: file:///C:/fake/document.html
+
+${htmlWithImageLocations.replace(/=/g, '=3D')}
+
+${contentParts.join('\n')}
+
+------=mhtDocumentPart--
+`;
+}
+
+function createWordDocxBlob(html: string): Blob {
+  return createZipBlob(
+    {
+      '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/afchunk.mht" ContentType="message/rfc822"/>
+</Types>
+`,
+      '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship
+      Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+      Target="/word/document.xml" Id="R09c83fafc067488e" />
+</Relationships>
+`,
+      'word/document.xml': createDocumentXml(),
+      'word/afchunk.mht': createMhtDocument(html),
+      'word/_rels/document.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk"
+    Target="/word/afchunk.mht" Id="htmlChunk" />
+</Relationships>
+`,
+    },
+    DOCX_MIME
+  );
 }
 
 function getStyleValue(style: string, prop: string): string {
@@ -378,5 +492,5 @@ ${bodyHtml}
 </body>
 </html>`;
 
-  return htmlDocx.asBlob(wordHtml);
+  return createWordDocxBlob(wordHtml);
 }

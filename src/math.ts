@@ -163,7 +163,7 @@ export function renderMathToHtml(tex: string, displayMode: boolean): string {
 /**
  * 把 LaTeX 源码转换为线性可读纯文本，用于 Word 导出。
  *
- * Word 经 html-docx-js 的 altChunk(MHT) 路径渲染时，既不支持 MathML，
+ * Word 经 altChunk(MHT) 路径渲染时，既不支持 MathML，
  * 也不支持 KaTeX 的 CSS 定位排版（分数/根号/上下标会错位或丢失），
  * 且 mathml 输出里的 <annotation> 还会让每个公式重复一遍。
  *
