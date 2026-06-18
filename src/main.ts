@@ -5,7 +5,7 @@ import { PREVIEW_VIEW_TYPE, WechatPreviewView } from './preview-view';
 import { PublishModal } from './publish-modal';
 import { WechatTheme, getTheme } from './themes';
 import { createWordDocumentBlob, docxArrayBufferToMarkdown } from './word';
-import { createPdfArrayBuffer } from './pdf';
+import { buildPrintableHtml, createPdfArrayBuffer } from './pdf';
 
 const DOCX_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -31,7 +31,7 @@ export default class MarkNicePlugin extends Plugin {
 
     this.addCommand({
       id: 'copy-as-wechat',
-      name: '复制为公众号格式（可直接粘贴到草稿编辑器）',
+      name: '复制到公众号',
       checkCallback: (checking) => {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
@@ -41,8 +41,19 @@ export default class MarkNicePlugin extends Plugin {
     });
 
     this.addCommand({
+      id: 'copy-current-markdown',
+      name: '复制当前笔记 Markdown',
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.copyMarkdown(file);
+        return true;
+      },
+    });
+
+    this.addCommand({
       id: 'publish-to-draft',
-      name: '发送到公众号草稿箱',
+      name: '发公众号草稿',
       checkCallback: (checking) => {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
@@ -64,6 +75,17 @@ export default class MarkNicePlugin extends Plugin {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
         if (!checking) void this.exportWordDocument(file);
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: 'export-html-document',
+      name: '另存当前笔记为 HTML',
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.exportHtmlDocument(file);
         return true;
       },
     });
@@ -141,6 +163,18 @@ export default class MarkNicePlugin extends Plugin {
     }
   }
 
+  async copyMarkdown(file: TFile): Promise<void> {
+    try {
+      const markdown = await this.getMarkdownContent(file);
+      if (!navigator.clipboard?.writeText) throw new Error('当前设备不支持文本剪贴板写入');
+      await navigator.clipboard.writeText(markdown);
+      new Notice(`已复制 Markdown：${file.basename}`, 3000);
+    } catch (err) {
+      console.error('[MarkNice WeChat] copy Markdown failed', err);
+      new Notice(`复制 Markdown 失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   async openPublishModal(file: TFile): Promise<void> {
     if (!this.settings.appId || !this.settings.appSecret) {
       new Notice('请先在「设置 → MarkNice WeChat」中填写 App ID 与 App Secret');
@@ -189,6 +223,21 @@ export default class MarkNicePlugin extends Plugin {
     }
   }
 
+  async exportHtmlDocument(file: TFile): Promise<void> {
+    try {
+      new Notice('正在生成 HTML 文件...');
+      const result = await this.convert(file);
+      const html = buildPrintableHtml(result.html, result.title);
+      const folder = file.parent?.path ?? '';
+      const path = this.getAvailableVaultPath(folder, sanitizeFileBaseName(file.basename), 'html');
+      const created = await this.app.vault.create(path, html);
+      new Notice(`已另存 HTML：${created.path}`);
+    } catch (err) {
+      console.error('[MarkNice WeChat] export HTML failed', err);
+      new Notice(`另存 HTML 失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   async exportPdfDocument(file: TFile): Promise<void> {
     if (Platform.isMobile) {
       new Notice('导出 PDF 仅支持桌面端，请在电脑上使用该功能。');
@@ -228,6 +277,20 @@ export default class MarkNicePlugin extends Plugin {
       document.body.appendChild(input);
       input.click();
     });
+  }
+
+  private async getMarkdownContent(file: TFile): Promise<string> {
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (activeView?.file === file) return activeView.editor.getValue();
+
+    const openViews: MarkdownView[] = [];
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.view instanceof MarkdownView && leaf.view.file === file) openViews.push(leaf.view);
+    });
+    const openView = openViews[0];
+    if (openView) return openView.editor.getValue();
+
+    return this.app.vault.cachedRead(file);
   }
 
   private getActiveFolderPath(): string {

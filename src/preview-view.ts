@@ -1,4 +1,4 @@
-import { ItemView, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
+import { ItemView, Menu, TFile, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import type MarkNicePlugin from './main';
 import { THEMES } from './themes';
 import {
@@ -86,20 +86,17 @@ export class WechatPreviewView extends ItemView {
     });
 
     const actions = toolbar.createDiv({ cls: 'mn-actions' });
-    this.makeButton(actions, 'file-input', '导入 Word', 'mn-btn', () => {
-      void this.plugin.importWordDocument();
-    });
-    this.makeButton(actions, 'file-output', '导出 Word', 'mn-btn', () => {
-      if (this.file) void this.plugin.exportWordDocument(this.file);
-    });
-    this.makeButton(actions, 'file-down', '导出 PDF', 'mn-btn', () => {
-      if (this.file) void this.plugin.exportPdfDocument(this.file);
-    });
-    this.makeButton(actions, 'copy', '复制', 'mn-btn', () => {
+    this.makeButton(actions, 'copy', '复制到公众号', 'mn-btn mn-btn-primary', () => {
       if (this.file) void this.plugin.copyAsWechat(this.file);
     });
-    this.makeButton(actions, 'send', '发草稿', 'mn-btn mn-btn-primary', () => {
+    this.makeButton(actions, 'send', '发公众号草稿', 'mn-btn', () => {
       if (this.file) void this.plugin.openPublishModal(this.file);
+    });
+    this.makeButton(actions, 'file-output', '导出', 'mn-btn mn-btn-compact', (event) => {
+      this.openExportMenu(event);
+    });
+    this.makeButton(actions, 'more-horizontal', '更多', 'mn-btn mn-btn-compact', (event) => {
+      this.openMoreMenu(event);
     });
 
     // ---- 第二行：字号 / 段距 / 预览模式 ----
@@ -150,7 +147,7 @@ export class WechatPreviewView extends ItemView {
     icon: string,
     label: string,
     cls: string,
-    onClick: () => void
+    onClick: (event: MouseEvent) => void
   ): HTMLButtonElement {
     const btn = parent.createEl('button', { cls });
     const iconEl = btn.createSpan({ cls: 'mn-btn-icon' });
@@ -158,6 +155,64 @@ export class WechatPreviewView extends ItemView {
     btn.createSpan({ text: label });
     btn.addEventListener('click', onClick);
     return btn;
+  }
+
+  private openExportMenu(event: MouseEvent): void {
+    const menu = new Menu();
+    const hasFile = !!this.file;
+
+    menu.addItem((item) =>
+      item
+        .setTitle('另存 HTML')
+        .setIcon('file-code')
+        .setDisabled(!hasFile)
+        .onClick(() => {
+          if (this.file) void this.plugin.exportHtmlDocument(this.file);
+        })
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle('导出 Word')
+        .setIcon('file-output')
+        .setDisabled(!hasFile)
+        .onClick(() => {
+          if (this.file) void this.plugin.exportWordDocument(this.file);
+        })
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle('导出 PDF')
+        .setIcon('file-down')
+        .setDisabled(!hasFile)
+        .onClick(() => {
+          if (this.file) void this.plugin.exportPdfDocument(this.file);
+        })
+    );
+
+    menu.showAtMouseEvent(event);
+  }
+
+  private openMoreMenu(event: MouseEvent): void {
+    const menu = new Menu();
+    const hasFile = !!this.file;
+
+    menu.addItem((item) =>
+      item
+        .setTitle('导入 Word')
+        .setIcon('file-input')
+        .onClick(() => void this.plugin.importWordDocument())
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle('复制 Markdown')
+        .setIcon('copy')
+        .setDisabled(!hasFile)
+        .onClick(() => {
+          if (this.file) void this.plugin.copyMarkdown(this.file);
+        })
+    );
+
+    menu.showAtMouseEvent(event);
   }
 
   /** 「label − n +」形式的步进控件，返回数值显示元素 */

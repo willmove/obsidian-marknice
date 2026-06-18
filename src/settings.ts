@@ -10,7 +10,7 @@ export interface MarkNiceSettings {
   defaultTheme: string;
   defaultAuthor: string;
   includeTitleInBody: boolean;
-  /** 字号偏移（px），影响预览、复制与发草稿 */
+  /** 字号偏移（px），影响预览、复制到公众号与发公众号草稿 */
   fontSizeOffset: number;
   /** 段距偏移（px） */
   paraSpacingOffset: number;
@@ -49,7 +49,7 @@ export class MarkNiceSettingTab extends PluginSettingTab {
     hero.createDiv({ cls: 'mn-settings-hero-title', text: 'MarkNice WeChat' });
     hero.createDiv({
       cls: 'mn-settings-hero-sub',
-      text: '把笔记变成漂亮的公众号文章 — 排版、复制、发草稿，一气呵成。',
+      text: '把笔记变成漂亮的公众号文章 — 排版、复制、发公众号草稿，一气呵成。',
     });
 
     new Setting(containerEl).setName('排版').setHeading();
@@ -109,7 +109,7 @@ export class MarkNiceSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('默认作者')
-      .setDesc('发草稿时的默认作者名（最多 8 个汉字），笔记 frontmatter 中的 author 字段优先。')
+      .setDesc('发公众号草稿时的默认作者名（最多 8 个汉字），笔记 frontmatter 中的 author 字段优先。')
       .addText((text) =>
         text
           .setPlaceholder('例如：南乔')

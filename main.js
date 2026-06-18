@@ -17727,7 +17727,7 @@ var MarkNiceSettingTab = class extends import_obsidian2.PluginSettingTab {
     hero.createDiv({ cls: "mn-settings-hero-title", text: "MarkNice WeChat" });
     hero.createDiv({
       cls: "mn-settings-hero-sub",
-      text: "\u628A\u7B14\u8BB0\u53D8\u6210\u6F02\u4EAE\u7684\u516C\u4F17\u53F7\u6587\u7AE0 \u2014 \u6392\u7248\u3001\u590D\u5236\u3001\u53D1\u8349\u7A3F\uFF0C\u4E00\u6C14\u5475\u6210\u3002"
+      text: "\u628A\u7B14\u8BB0\u53D8\u6210\u6F02\u4EAE\u7684\u516C\u4F17\u53F7\u6587\u7AE0 \u2014 \u6392\u7248\u3001\u590D\u5236\u3001\u53D1\u516C\u4F17\u53F7\u8349\u7A3F\uFF0C\u4E00\u6C14\u5475\u6210\u3002"
     });
     new import_obsidian2.Setting(containerEl).setName("\u6392\u7248").setHeading();
     new import_obsidian2.Setting(containerEl).setName("\u9ED8\u8BA4\u4E3B\u9898").setDesc("\u8F6C\u6362\u4E0E\u9884\u89C8\u65F6\u9ED8\u8BA4\u4F7F\u7528\u7684\u6392\u7248\u4E3B\u9898\uFF0C\u9884\u89C8\u9762\u677F\u4E2D\u53EF\u968F\u65F6\u5207\u6362\u3002").addDropdown((dd) => {
@@ -17759,7 +17759,7 @@ var MarkNiceSettingTab = class extends import_obsidian2.PluginSettingTab {
         this.plugin.refreshPreview();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("\u9ED8\u8BA4\u4F5C\u8005").setDesc("\u53D1\u8349\u7A3F\u65F6\u7684\u9ED8\u8BA4\u4F5C\u8005\u540D\uFF08\u6700\u591A 8 \u4E2A\u6C49\u5B57\uFF09\uFF0C\u7B14\u8BB0 frontmatter \u4E2D\u7684 author \u5B57\u6BB5\u4F18\u5148\u3002").addText(
+    new import_obsidian2.Setting(containerEl).setName("\u9ED8\u8BA4\u4F5C\u8005").setDesc("\u53D1\u516C\u4F17\u53F7\u8349\u7A3F\u65F6\u7684\u9ED8\u8BA4\u4F5C\u8005\u540D\uFF08\u6700\u591A 8 \u4E2A\u6C49\u5B57\uFF09\uFF0C\u7B14\u8BB0 frontmatter \u4E2D\u7684 author \u5B57\u6BB5\u4F18\u5148\u3002").addText(
       (text2) => text2.setPlaceholder("\u4F8B\u5982\uFF1A\u5357\u4E54").setValue(this.plugin.settings.defaultAuthor).onChange(async (value) => {
         this.plugin.settings.defaultAuthor = value.trim();
         await this.plugin.saveSettings();
@@ -17843,20 +17843,17 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
       this.scheduleRender();
     });
     const actions = toolbar.createDiv({ cls: "mn-actions" });
-    this.makeButton(actions, "file-input", "\u5BFC\u5165 Word", "mn-btn", () => {
-      void this.plugin.importWordDocument();
-    });
-    this.makeButton(actions, "file-output", "\u5BFC\u51FA Word", "mn-btn", () => {
-      if (this.file) void this.plugin.exportWordDocument(this.file);
-    });
-    this.makeButton(actions, "file-down", "\u5BFC\u51FA PDF", "mn-btn", () => {
-      if (this.file) void this.plugin.exportPdfDocument(this.file);
-    });
-    this.makeButton(actions, "copy", "\u590D\u5236", "mn-btn", () => {
+    this.makeButton(actions, "copy", "\u590D\u5236\u5230\u516C\u4F17\u53F7", "mn-btn mn-btn-primary", () => {
       if (this.file) void this.plugin.copyAsWechat(this.file);
     });
-    this.makeButton(actions, "send", "\u53D1\u8349\u7A3F", "mn-btn mn-btn-primary", () => {
+    this.makeButton(actions, "send", "\u53D1\u516C\u4F17\u53F7\u8349\u7A3F", "mn-btn", () => {
       if (this.file) void this.plugin.openPublishModal(this.file);
+    });
+    this.makeButton(actions, "file-output", "\u5BFC\u51FA", "mn-btn mn-btn-compact", (event) => {
+      this.openExportMenu(event);
+    });
+    this.makeButton(actions, "more-horizontal", "\u66F4\u591A", "mn-btn mn-btn-compact", (event) => {
+      this.openMoreMenu(event);
     });
     const adjustBar = header.createDiv({ cls: "mn-adjust-bar" });
     this.fontSizeLabelEl = this.makeStepper(adjustBar, "\u5B57\u53F7", {
@@ -17898,6 +17895,39 @@ var WechatPreviewView = class extends import_obsidian3.ItemView {
     btn.createSpan({ text: label });
     btn.addEventListener("click", onClick);
     return btn;
+  }
+  openExportMenu(event) {
+    const menu = new import_obsidian3.Menu();
+    const hasFile = !!this.file;
+    menu.addItem(
+      (item) => item.setTitle("\u53E6\u5B58 HTML").setIcon("file-code").setDisabled(!hasFile).onClick(() => {
+        if (this.file) void this.plugin.exportHtmlDocument(this.file);
+      })
+    );
+    menu.addItem(
+      (item) => item.setTitle("\u5BFC\u51FA Word").setIcon("file-output").setDisabled(!hasFile).onClick(() => {
+        if (this.file) void this.plugin.exportWordDocument(this.file);
+      })
+    );
+    menu.addItem(
+      (item) => item.setTitle("\u5BFC\u51FA PDF").setIcon("file-down").setDisabled(!hasFile).onClick(() => {
+        if (this.file) void this.plugin.exportPdfDocument(this.file);
+      })
+    );
+    menu.showAtMouseEvent(event);
+  }
+  openMoreMenu(event) {
+    const menu = new import_obsidian3.Menu();
+    const hasFile = !!this.file;
+    menu.addItem(
+      (item) => item.setTitle("\u5BFC\u5165 Word").setIcon("file-input").onClick(() => void this.plugin.importWordDocument())
+    );
+    menu.addItem(
+      (item) => item.setTitle("\u590D\u5236 Markdown").setIcon("copy").setDisabled(!hasFile).onClick(() => {
+        if (this.file) void this.plugin.copyMarkdown(this.file);
+      })
+    );
+    menu.showAtMouseEvent(event);
   }
   /** 「label − n +」形式的步进控件，返回数值显示元素 */
   makeStepper(parent, label, opts) {
@@ -20861,7 +20891,7 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
     });
     this.addCommand({
       id: "copy-as-wechat",
-      name: "\u590D\u5236\u4E3A\u516C\u4F17\u53F7\u683C\u5F0F\uFF08\u53EF\u76F4\u63A5\u7C98\u8D34\u5230\u8349\u7A3F\u7F16\u8F91\u5668\uFF09",
+      name: "\u590D\u5236\u5230\u516C\u4F17\u53F7",
       checkCallback: (checking) => {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
@@ -20870,8 +20900,18 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       }
     });
     this.addCommand({
+      id: "copy-current-markdown",
+      name: "\u590D\u5236\u5F53\u524D\u7B14\u8BB0 Markdown",
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.copyMarkdown(file);
+        return true;
+      }
+    });
+    this.addCommand({
       id: "publish-to-draft",
-      name: "\u53D1\u9001\u5230\u516C\u4F17\u53F7\u8349\u7A3F\u7BB1",
+      name: "\u53D1\u516C\u4F17\u53F7\u8349\u7A3F",
       checkCallback: (checking) => {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
@@ -20891,6 +20931,16 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
         const file = this.getActiveMarkdownFile();
         if (!file) return false;
         if (!checking) void this.exportWordDocument(file);
+        return true;
+      }
+    });
+    this.addCommand({
+      id: "export-html-document",
+      name: "\u53E6\u5B58\u5F53\u524D\u7B14\u8BB0\u4E3A HTML",
+      checkCallback: (checking) => {
+        const file = this.getActiveMarkdownFile();
+        if (!file) return false;
+        if (!checking) void this.exportHtmlDocument(file);
         return true;
       }
     });
@@ -20957,6 +21007,18 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       new import_obsidian6.Notice(`\u590D\u5236\u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
     }
   }
+  async copyMarkdown(file) {
+    var _a2;
+    try {
+      const markdown = await this.getMarkdownContent(file);
+      if (!((_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText)) throw new Error("\u5F53\u524D\u8BBE\u5907\u4E0D\u652F\u6301\u6587\u672C\u526A\u8D34\u677F\u5199\u5165");
+      await navigator.clipboard.writeText(markdown);
+      new import_obsidian6.Notice(`\u5DF2\u590D\u5236 Markdown\uFF1A${file.basename}`, 3e3);
+    } catch (err2) {
+      console.error("[MarkNice WeChat] copy Markdown failed", err2);
+      new import_obsidian6.Notice(`\u590D\u5236 Markdown \u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
+    }
+  }
   async openPublishModal(file) {
     if (!this.settings.appId || !this.settings.appSecret) {
       new import_obsidian6.Notice("\u8BF7\u5148\u5728\u300C\u8BBE\u7F6E \u2192 MarkNice WeChat\u300D\u4E2D\u586B\u5199 App ID \u4E0E App Secret");
@@ -21002,6 +21064,21 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       new import_obsidian6.Notice(`\u5BFC\u51FA Word \u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
     }
   }
+  async exportHtmlDocument(file) {
+    var _a2, _b2;
+    try {
+      new import_obsidian6.Notice("\u6B63\u5728\u751F\u6210 HTML \u6587\u4EF6...");
+      const result = await this.convert(file);
+      const html2 = buildPrintableHtml(result.html, result.title);
+      const folder = (_b2 = (_a2 = file.parent) == null ? void 0 : _a2.path) != null ? _b2 : "";
+      const path2 = this.getAvailableVaultPath(folder, sanitizeFileBaseName(file.basename), "html");
+      const created = await this.app.vault.create(path2, html2);
+      new import_obsidian6.Notice(`\u5DF2\u53E6\u5B58 HTML\uFF1A${created.path}`);
+    } catch (err2) {
+      console.error("[MarkNice WeChat] export HTML failed", err2);
+      new import_obsidian6.Notice(`\u53E6\u5B58 HTML \u5931\u8D25\uFF1A${err2 instanceof Error ? err2.message : String(err2)}`);
+    }
+  }
   async exportPdfDocument(file) {
     var _a2, _b2;
     if (import_obsidian6.Platform.isMobile) {
@@ -21042,6 +21119,17 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
       document.body.appendChild(input);
       input.click();
     });
+  }
+  async getMarkdownContent(file) {
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian6.MarkdownView);
+    if ((activeView == null ? void 0 : activeView.file) === file) return activeView.editor.getValue();
+    const openViews = [];
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.view instanceof import_obsidian6.MarkdownView && leaf.view.file === file) openViews.push(leaf.view);
+    });
+    const openView = openViews[0];
+    if (openView) return openView.editor.getValue();
+    return this.app.vault.cachedRead(file);
   }
   getActiveFolderPath() {
     var _a2, _b2, _c;
