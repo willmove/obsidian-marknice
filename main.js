@@ -17461,32 +17461,6 @@ var THEMES = {
     hr: "#e8e6dc",
     markBg: "#f9e8e0"
   },
-  default: {
-    id: "default",
-    label: "\u7ECF\u5178\u84DD",
-    bodyFont: "-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif",
-    text: "#2c3e50",
-    heading: "#1f2d3d",
-    accent: "#2d8cf0",
-    quoteBg: "#f7f7f7",
-    quoteBorder: "#2d8cf0",
-    codeBg: "#f6f8fa",
-    hr: "#eaecef",
-    markBg: "#dcedff"
-  },
-  simple: {
-    id: "simple",
-    label: "\u6742\u5FD7\u886C\u7EBF",
-    bodyFont: "Georgia,'PingFang SC','Microsoft YaHei',serif",
-    text: "#333333",
-    heading: "#111111",
-    accent: "#3f51b5",
-    quoteBg: "#fafafa",
-    quoteBorder: "#3f51b5",
-    codeBg: "#f5f5f5",
-    hr: "#dddddd",
-    markBg: "#e3e6f7"
-  },
   minimal: {
     id: "minimal",
     label: "\u6781\u7B80\u9ED1\u767D",
@@ -17519,20 +17493,34 @@ var THEMES = {
     pageBg: "linear-gradient(rgba(99,102,241,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.045) 1px,transparent 1px),radial-gradient(circle at 92% 8%,rgba(236,72,153,0.16) 0 120px,transparent 122px),radial-gradient(circle at 6% 88%,rgba(99,102,241,0.16) 0 140px,transparent 142px),#ffffff",
     pageBgSize: "40px 40px,40px 40px,auto,auto,auto"
   },
-  tech: {
-    id: "tech",
-    label: "\u6781\u5BA2\u6DF1\u8272",
-    bodyFont: "Inter,'PingFang SC','Microsoft YaHei',sans-serif",
-    text: "#dbe7ff",
-    heading: "#ffffff",
-    accent: "#56b6ff",
-    quoteBg: "#111827",
-    quoteBorder: "#56b6ff",
-    codeBg: "#0f172a",
-    codeText: "#dbe7ff",
-    hr: "#334155",
-    markBg: "#1d3a5f",
-    pageBg: "#020617"
+  night: {
+    id: "night",
+    label: "\u6697\u591C\u6DF1\u8272",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#d5dbff",
+    heading: "#9ec5ff",
+    accent: "#7de3ff",
+    strong: "#84f0ff",
+    quoteBg: "#171b2f",
+    quoteBorder: "#7c8cff",
+    codeBg: "#23294a",
+    codeText: "#d6e0ff",
+    hr: "#2f3763",
+    markBg: "#1f2a55",
+    pageBg: "#0f1220"
+  },
+  simple: {
+    id: "simple",
+    label: "\u7B80\u6D01\u84DD",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif",
+    text: "#2c3e50",
+    heading: "#1f2d3d",
+    accent: "#2d8cf0",
+    quoteBg: "#f7f7f7",
+    quoteBorder: "#2d8cf0",
+    codeBg: "#f6f8fa",
+    hr: "#eaecef",
+    markBg: "#dcedff"
   },
   elegant: {
     id: "elegant",
@@ -17583,8 +17571,8 @@ var THEMES = {
     hr: "#fcd34d",
     markBg: "#fef3c7"
   },
-  edu: {
-    id: "edu",
+  green: {
+    id: "green",
     label: "\u6E05\u65B0\u7EFF",
     bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
     text: "#2f2f2f",
@@ -17644,22 +17632,6 @@ var THEMES = {
     codeText: "#704a1a",
     hr: "#d7c19a",
     markBg: "#f0e3cc"
-  },
-  night: {
-    id: "night",
-    label: "\u591C\u7A7A\u84DD",
-    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
-    text: "#d5dbff",
-    heading: "#9ec5ff",
-    accent: "#7de3ff",
-    strong: "#84f0ff",
-    quoteBg: "#171b2f",
-    quoteBorder: "#7c8cff",
-    codeBg: "#23294a",
-    codeText: "#d6e0ff",
-    hr: "#2f3763",
-    markBg: "#1f2a55",
-    pageBg: "#0f1220"
   },
   purple: {
     id: "purple",
@@ -20960,6 +20932,20 @@ var MarkNicePlugin = class extends import_obsidian6.Plugin {
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    let migrated = false;
+    if (this.settings.defaultTheme === "default") {
+      this.settings.defaultTheme = "simple";
+      migrated = true;
+    }
+    if (this.settings.defaultTheme === "tech") {
+      this.settings.defaultTheme = "night";
+      migrated = true;
+    }
+    if (this.settings.defaultTheme === "edu") {
+      this.settings.defaultTheme = "green";
+      migrated = true;
+    }
+    if (migrated) await this.saveSettings();
   }
   async saveSettings() {
     await this.saveData(this.settings);

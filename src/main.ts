@@ -110,6 +110,20 @@ export default class MarkNicePlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    let migrated = false;
+    if (this.settings.defaultTheme === 'default') {
+      this.settings.defaultTheme = 'simple';
+      migrated = true;
+    }
+    if (this.settings.defaultTheme === 'tech') {
+      this.settings.defaultTheme = 'night';
+      migrated = true;
+    }
+    if (this.settings.defaultTheme === 'edu') {
+      this.settings.defaultTheme = 'green';
+      migrated = true;
+    }
+    if (migrated) await this.saveSettings();
   }
 
   async saveSettings(): Promise<void> {
