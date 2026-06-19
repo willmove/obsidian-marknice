@@ -221,3 +221,46 @@ Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## English
+
+MarkNice WeChat is an Obsidian plugin that converts Markdown notes into WeChat Official Account-ready HTML. It provides live preview, themed formatting, one-click rich-text copy, Word import/export, math rendering, and direct draft publishing through the WeChat Official Account API.
+
+### Highlights
+
+- Live WeChat-style preview inside Obsidian
+- Phone and desktop preview modes
+- 16 built-in themes
+- Font-size and paragraph-spacing tuning
+- Rich-text copy with inline styles
+- Direct publishing to the WeChat draft box
+- KaTeX-powered inline and block math
+- Word `.docx` import and export
+- Obsidian syntax support, including image embeds, wikilinks, highlights, callouts, task lists, tables, and code blocks
+
+### Install
+
+If the plugin is available in the Obsidian community plugin marketplace, install **MarkNice WeChat** from there.
+
+For manual installation, copy `main.js`, `manifest.json`, and `styles.css` into:
+
+```text
+<vault>/.obsidian/plugins/marknice-wechat/
+```
+
+Then enable **MarkNice WeChat** in Obsidian Settings -> Community plugins.
+
+### Build From Source
+
+```bash
+npm install
+npm run build
+```
+
+### Publishing Setup
+
+Enter your **WeChat App ID** and **WeChat App Secret** in the plugin settings. The WeChat API requires your outbound IP to be whitelisted, and draft/material APIs generally require a verified WeChat Official Account.
+
+Frontmatter keys `title`, `author`, `digest`, `description`, and `cover` can prefill the publish dialog.
