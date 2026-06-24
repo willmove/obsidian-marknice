@@ -123,6 +123,10 @@ export default class MarkNicePlugin extends Plugin {
       this.settings.defaultTheme = 'green';
       migrated = true;
     }
+    if (this.settings.defaultTheme === 'purple') {
+      this.settings.defaultTheme = 'warmred';
+      migrated = true;
+    }
     if (migrated) await this.saveSettings();
   }
 

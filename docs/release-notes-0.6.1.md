@@ -55,7 +55,7 @@ This release supersedes the earlier 0.5.x release drafts and is the stable commu
 - **Desktop and mobile Obsidian support** - the plugin is no longer desktop-only. On desktop, the preview opens in the side workspace; on mobile, it opens as a normal tab so tapping the plugin action works reliably.
 - **Phone and desktop preview modes** - phone mode wraps the article in a 375px device frame to mirror the reader experience, while desktop mode keeps a wider editing-preview layout.
 - **Live WeChat-style preview** - the active note is converted into inline-styled WeChat-ready HTML and refreshes as you edit.
-- **16 differentiated themes** - including Claude Warm Clay, Classic Blue, Magazine Serif, Minimal Mono, Indigo-Pink Gradient, Geek Dark, Health Green, Night Sky Blue, Sea Salt Cyan, and more.
+- **16 differentiated themes** - including Warm Ceramic White (Claude-inspired), Classic Blue, Magazine Serif, Minimal Mono, Indigo-Pink Gradient, Geek Dark, Health Green, Night Sky Blue, Sea Salt Cyan, and more.
 - **Theme improvements** - refreshed Health Green, Cafe-style Elegant Brown, and Indigo-Pink Gradient themes make the theme list easier to scan and more visually distinct.
 - **Font size and paragraph spacing tuning** - adjust font size by `+/-6px` and paragraph spacing from `-16` to `+24px`; changes apply consistently to preview, copy, and draft publishing.
 - **One-click copy** - desktop browsers that support rich clipboard output receive `text/html` plus `text/plain`; mobile environments that do not support rich clipboard writes fall back gracefully to plain text instead of failing silently.

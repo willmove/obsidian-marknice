@@ -127,6 +127,106 @@ function scaleStyle(style: string, fontOffset: number, spacingOffset: number): s
   return s;
 }
 
+function detectHeadingNumberPrefix(text: string): { value: string; length: number } | null {
+  const patterns = [
+    /^\s*[（(]\s*([0-9]{1,2}|[一二三四五六七八九十百]+)\s*[)）][、.．:：]?\s*/,
+    /^\s*([0-9]{1,2}|[一二三四五六七八九十百]+)\s*[、.．:：]\s*/,
+    /^\s*([0-9]{1,2})\s+/,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return { value: match[1], length: match[0].length };
+  }
+  return null;
+}
+
+function stripTextPrefix(node: Node, count: number): number {
+  if (!count) return 0;
+  Array.from(node.childNodes).forEach((child) => {
+    if (!count) return;
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.nodeValue ?? '';
+      if (text.length <= count) {
+        count -= text.length;
+        child.nodeValue = '';
+      } else {
+        child.nodeValue = text.slice(count);
+        count = 0;
+      }
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      count = stripTextPrefix(child, count);
+    }
+  });
+  return count;
+}
+
+function warmredCircleHtml(label: string, block: boolean): string {
+  const outerStyle = block
+    ? 'display:block;text-align:center;margin-bottom:8px;'
+    : 'display:inline-block;vertical-align:middle;margin-right:10px;';
+  const circleStyle = block
+    ? "display:inline-block;box-sizing:border-box;width:52px;height:52px;line-height:48px;border:2px solid #c0392b;border-radius:50%;background:transparent;color:#c0392b;font-size:24px;font-weight:900;text-align:center;font-family:'DIN Alternate','Impact','Arial Black',sans-serif;letter-spacing:1px;"
+    : "display:inline-block;box-sizing:border-box;min-width:40px;height:40px;line-height:36px;padding:0 8px;border:2px solid #c0392b;border-radius:999px;background:transparent;color:#c0392b;font-size:16px;font-weight:900;text-align:center;font-family:'DIN Alternate','Impact','Arial Black',sans-serif;letter-spacing:0;";
+  return `<span style="${outerStyle}"><span style="${circleStyle}">${escapeHtml(label)}</span></span>`;
+}
+
+function applyWarmredHeadingNumbers(body: HTMLElement, spacingOffset: number): void {
+  let h2Counter = 0;
+  const h2TopMargin = Math.max((32 + spacingOffset) * 2, 0);
+  const h2BottomMargin = Math.max((16 + spacingOffset) / 2, 0);
+  body.querySelectorAll('h2').forEach((el) => {
+    const numbered = detectHeadingNumberPrefix(el.textContent ?? '');
+    const wrapper = body.ownerDocument.createElement('div');
+    wrapper.setAttribute('style', `text-align:center;margin:${h2TopMargin}px 0 ${h2BottomMargin}px;padding:0;`);
+    el.parentNode?.insertBefore(wrapper, el);
+    wrapper.appendChild(el);
+    const h2Style = (el.getAttribute('style') ?? '').replace(/margin:[^;]+;?/g, '');
+    el.setAttribute('style', `${h2Style};margin:0;`);
+    if (numbered) {
+      const numericValue = /^[0-9]+$/.test(numbered.value) ? Number(numbered.value) : null;
+      h2Counter = numericValue || h2Counter + 1;
+      stripTextPrefix(el, numbered.length);
+      el.insertBefore(htmlToNodes(warmredCircleHtml(numbered.value, false)), el.firstChild);
+    } else {
+      h2Counter += 1;
+      wrapper.insertBefore(htmlToNodes(warmredCircleHtml(String(h2Counter).padStart(2, '0'), true)), wrapper.firstChild);
+    }
+  });
+}
+
+function amberHeadingHtml(
+  tagName: 'h1' | 'h2',
+  text: string,
+  fontOffset: number,
+  spacingOffset: number,
+  marginOverride?: string
+): string {
+  const isH1 = tagName === 'h1';
+  const style = scaleStyle(
+    `font-size:${isH1 ? 20 : 18}px;line-height:1.6;font-weight:800;margin:${
+      marginOverride ?? (isH1 ? '40px 0 28px' : '36px 0 24px')
+    };color:#fff;text-align:center;background:#c8722a;border-radius:8px;padding:${
+      isH1 ? '10px 28px' : '8px 24px'
+    };display:inline-block;width:auto;`,
+    fontOffset,
+    spacingOffset
+  );
+  return `<div style="text-align:center;margin:0;padding:0;"><${tagName} style="${style}">${escapeHtml(
+    text
+  )}</${tagName}></div>`;
+}
+
+function applyAmberOrderedListMarkers(body: HTMLElement): void {
+  body.querySelectorAll('ol').forEach((ol) => {
+    ol.querySelectorAll(':scope > li').forEach((li, index) => {
+      li.insertBefore(
+        htmlToNodes(`<span style="color:#c8722a;font-weight:700;">${index + 1}、</span>`),
+        li.firstChild
+      );
+    });
+  });
+}
+
 function headingStyle(
   theme: WechatTheme,
   fontOffset: number,
@@ -203,6 +303,8 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   const strongColor = theme.strong ?? theme.heading;
   const codeText = theme.codeText ?? theme.text;
   const st = (css: string): string => scaleStyle(css, fontOffset, spacingOffset);
+  const isWarmred = theme.id === 'warmred';
+  const isAmber = theme.id === 'amber';
 
   body.querySelectorAll('script,style,link,meta,iframe').forEach((el) => el.remove());
 
@@ -223,11 +325,23 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   body.querySelectorAll('p').forEach((p) => {
     setStyle(
       p,
-      st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`)
+      isWarmred
+        ? st('font-size:15px;line-height:2.0;margin:14px 0;color:#3b2e2a;text-align:justify;letter-spacing:.3px;word-break:break-word;')
+        : isAmber
+          ? st('font-size:15px;line-height:2.0;margin:18px 0;color:#2c2c2c;text-align:justify;letter-spacing:.2px;word-break:break-word;')
+        : st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`)
     );
   });
 
   body.querySelectorAll('h1').forEach((el) => {
+    if (isWarmred) {
+      setStyle(el, st('font-size:24px;line-height:1.6;font-weight:800;margin:36px 0 18px;color:#c0392b;text-align:center;'));
+      return;
+    }
+    if (isAmber) {
+      replaceWithHtml(el, amberHeadingHtml('h1', el.textContent ?? '', fontOffset, spacingOffset));
+      return;
+    }
     const opts = {
       margin: '28px 0 18px',
       fontSize: 24,
@@ -249,6 +363,17 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     );
   });
   body.querySelectorAll('h2').forEach((el) => {
+    if (isWarmred) {
+      setStyle(
+        el,
+        st('font-size:20px;line-height:1.6;font-weight:700;margin:32px 0 16px;color:#c0392b;text-align:center;border-bottom:2px solid #c0392b;padding-bottom:8px;display:inline-block;')
+      );
+      return;
+    }
+    if (isAmber) {
+      replaceWithHtml(el, amberHeadingHtml('h2', el.textContent ?? '', fontOffset, spacingOffset));
+      return;
+    }
     const opts = {
       margin: '24px 0 14px',
       fontSize: 21,
@@ -269,17 +394,51 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
       headingStyle(theme, fontOffset, spacingOffset, opts)
     );
   });
+  if (isWarmred) applyWarmredHeadingNumbers(body, spacingOffset);
   body.querySelectorAll('h3').forEach((el) => {
-    setStyle(el, st(`margin:20px 0 12px;font-size:18px;line-height:1.5;color:${theme.heading};font-weight:700;`));
+    setStyle(
+      el,
+      isWarmred
+        ? st('font-size:17px;line-height:1.6;font-weight:700;margin:28px 0 12px;color:#c0392b;')
+        : isAmber
+          ? st('font-size:16px;line-height:1.6;font-weight:700;margin:30px 0 18px;color:#c8722a;')
+        : st(`margin:20px 0 12px;font-size:18px;line-height:1.5;color:${theme.heading};font-weight:700;`)
+    );
   });
   body.querySelectorAll('h4,h5,h6').forEach((el) => {
+    if (isWarmred) {
+      const tag = el.tagName.toLowerCase();
+      const style =
+        tag === 'h4'
+          ? 'font-size:15px;line-height:1.6;font-weight:700;margin:22px 0 10px;color:#a93226;'
+          : tag === 'h5'
+            ? 'font-size:14px;line-height:1.6;font-weight:700;margin:18px 0 8px;color:#a93226;'
+            : 'font-size:13px;line-height:1.6;font-weight:700;margin:14px 0 8px;color:#a93226;';
+      setStyle(el, st(style));
+      return;
+    }
+    if (isAmber) {
+      const tag = el.tagName.toLowerCase();
+      const style =
+        tag === 'h4'
+          ? 'font-size:15px;line-height:1.6;font-weight:700;margin:24px 0 14px;color:#c8722a;'
+          : tag === 'h5'
+            ? 'font-size:14px;line-height:1.6;font-weight:700;margin:20px 0 12px;color:#c8722a;'
+            : 'font-size:13px;line-height:1.6;font-weight:700;margin:16px 0 10px;color:#c8722a;';
+      setStyle(el, st(style));
+      return;
+    }
     setStyle(el, st(`margin:18px 0 10px;font-size:17px;line-height:1.6;color:${theme.heading};font-weight:600;`));
   });
 
   body.querySelectorAll('blockquote').forEach((el) => {
     setStyle(
       el,
-      st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
+      isWarmred
+        ? st('margin:18px 0;padding:14px 18px;border-left:4px solid #c0392b;background:#fef5f0;color:#7a2e1f;font-size:14px;line-height:1.9;border-radius:0 8px 8px 0;')
+        : isAmber
+          ? st('margin:20px 0;padding:14px 18px;border-left:4px solid #c8722a;background:#fdf5ec;color:#7a4010;font-size:14px;line-height:1.95;border-radius:0 8px 8px 0;')
+        : st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
     );
   });
 
@@ -297,7 +456,19 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     el.querySelectorAll(':scope > li > p').forEach((p) => {
       p.replaceWith(htmlToNodes(p.innerHTML));
     });
-    setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
+    if (isAmber) {
+      const tag = el.tagName.toLowerCase();
+      setStyle(
+        el,
+        st(
+          tag === 'ol'
+            ? 'margin:16px 0;padding-left:0;line-height:2.0;color:#2c2c2c;font-size:15px;list-style:none;'
+            : 'margin:16px 0;padding-left:22px;line-height:2.0;color:#2c2c2c;font-size:15px;'
+        )
+      );
+    } else {
+      setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
+    }
   });
   body.querySelectorAll('li').forEach((el) => {
     const text = (el.textContent ?? '').replace(/ /g, ' ').trim();
@@ -308,8 +479,9 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     for (const node of Array.from(el.childNodes)) {
       if (node.nodeType === 3 && !(node.textContent ?? '').trim()) node.remove();
     }
-    setStyle(el, st(`margin:6px 0;font-size:16px;`));
+    setStyle(el, isAmber ? st('margin:10px 0;') : st(`margin:6px 0;font-size:16px;`));
   });
+  if (isAmber) applyAmberOrderedListMarkers(body);
 
   body.querySelectorAll('pre').forEach((el) => {
     const code = (el.textContent ?? '').replace(/\n+$/, '');
@@ -322,7 +494,9 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     replaceWithHtml(
       el,
       `<pre style="${st(
-        `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+        isAmber
+          ? 'background:#fdf5ec;border:1px solid #f0d5b0;border-radius:8px;padding:14px;overflow:auto;line-height:1.65;font-size:12px;color:#a05a20;font-family:Menlo,Consolas,monospace;white-space:normal;word-break:break-all;margin:18px 0;'
+          : `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
       )}">${codeHtml}</pre>`
     );
   });
@@ -331,9 +505,11 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     if (el.parentElement?.tagName.toLowerCase() === 'pre') return;
     replaceWithHtml(
       el,
-      `<code style="font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${
-        theme.accent
-      };display:inline;white-space:normal;padding:2px 6px;border-radius:4px;font-size:0.92em;">${escapeHtml(
+      `<code style="${
+        isAmber
+          ? 'background:#faebd7;padding:2px 6px;border-radius:4px;font-size:90%;font-family:Menlo,Consolas,monospace;color:#a05a20;display:inline;white-space:normal;'
+          : `font-family:Menlo,Consolas,monospace;background:${theme.codeBg};color:${theme.accent};display:inline;white-space:normal;padding:2px 6px;border-radius:4px;font-size:0.92em;`
+      }">${escapeHtml(
         el.textContent ?? ''
       )}</code>`
     );
@@ -353,7 +529,12 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   });
 
   body.querySelectorAll('a').forEach((el) => {
-    setStyle(el, `color:${theme.accent};text-decoration:none;border-bottom:1px solid ${theme.accent};`);
+    setStyle(
+      el,
+      isAmber
+        ? 'color:#c8722a;text-decoration:none;border-bottom:1px solid #e8b07a;'
+        : `color:${theme.accent};text-decoration:none;border-bottom:1px solid ${theme.accent};`
+    );
     el.removeAttribute('target');
   });
 
@@ -363,27 +544,38 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     // 不渲染图片标题（figcaption）：避免文件名等 alt 文本出现在图片下方
     replaceWithHtml(
       el,
-      `<figure style="${st('margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
+      `<figure style="${st(isAmber ? 'margin:0;text-align:center;' : 'margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
         alt
-      )}" style="max-width:100%;height:auto;border-radius:8px;display:inline-block;" /></figure>`
+      )}" style="${
+        isAmber
+          ? 'max-width:100%;height:auto;border-radius:8px;display:block;margin:24px auto;'
+          : 'max-width:100%;height:auto;border-radius:8px;display:inline-block;'
+      }" /></figure>`
     );
   });
 
   body.querySelectorAll('table').forEach((el) => {
-    setStyle(el, st('width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;'));
+    setStyle(
+      el,
+      isAmber
+        ? st('border-collapse:collapse;width:100%;margin:16px 0;font-size:13px;')
+        : st('width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;')
+    );
   });
   body.querySelectorAll('th').forEach((el) => {
     setStyle(
       el,
-      `border:1px solid ${theme.hr};padding:8px 10px;background:${theme.quoteBg};font-weight:700;color:${theme.heading};text-align:left;`
+      isAmber
+        ? 'border:1px solid #f0d5b0;padding:10px;background:#fdf0e0;text-align:left;color:#7a4010;'
+        : `border:1px solid ${theme.hr};padding:8px 10px;background:${theme.quoteBg};font-weight:700;color:${theme.heading};text-align:left;`
     );
   });
   body.querySelectorAll('td').forEach((el) => {
-    setStyle(el, `border:1px solid ${theme.hr};padding:8px 10px;color:${theme.text};`);
+    setStyle(el, isAmber ? 'border:1px solid #f0d5b0;padding:10px;color:#2c2c2c;' : `border:1px solid ${theme.hr};padding:8px 10px;color:${theme.text};`);
   });
 
   body.querySelectorAll('hr').forEach((el) => {
-    replaceWithHtml(el, `<hr style="${st(`border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`);
+    replaceWithHtml(el, `<hr style="${st(isAmber ? 'border:none;border-top:1px solid #f0d5b0;margin:28px 0;' : `border:none;border-top:1px solid ${theme.hr};margin:28px 0;`)}" />`);
   });
 
   body.querySelectorAll('.math-block').forEach((el) => {
@@ -508,13 +700,16 @@ export async function convertFileToWechat(
 
   const fontOffset = options.fontSizeOffset ?? 0;
   const spacingOffset = options.paraSpacingOffset ?? 0;
+  const isAmber = theme.id === 'amber';
   applyThemeStyles(body, theme, fontOffset, spacingOffset);
   const firstImage = await resolveImages(app, body, file.path);
   const plainText = (body.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
   renderMathInElement(body);
 
   const titleHtml = options.includeTitleInBody
-    ? theme.headingVariant === 'ribbon'
+    ? isAmber
+      ? amberHeadingHtml('h1', title, fontOffset, spacingOffset, '0px 0 28px')
+      : theme.headingVariant === 'ribbon'
       ? ribbonHeadingHtml(theme, title, fontOffset, spacingOffset, {
           margin: '0px 0 24px',
           fontSize: 26,
@@ -544,10 +739,13 @@ export async function convertFileToWechat(
         theme.pageBgSize ? `background-size:${theme.pageBgSize};` : ''
       }padding:24px 20px;border-radius:8px;`
     : '';
-  const html = `<section style="font-family:${theme.bodyFont};font-size:${Math.max(
-    16 + fontOffset,
-    9
-  )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
+  const sectionStyle = isAmber
+    ? `font-family:${theme.bodyFont};word-break:break-word;color:${theme.text};${pageBgStyle}`
+    : `font-family:${theme.bodyFont};font-size:${Math.max(
+        16 + fontOffset,
+        9
+      )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}`;
+  const html = `<section style="${sectionStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
 
   return { html, plainText, title, meta, firstImage };
 }
