@@ -6,3 +6,6 @@ node_modules/
 
 # editor/OS noise
 .DS_Store
+
+# local publishing notes
+docs/公众号发布介绍.md

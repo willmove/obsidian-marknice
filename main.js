@@ -21730,7 +21730,7 @@ var MarkNicePlugin = class extends import_obsidian7.Plugin {
     const existing = this.app.workspace.getLeavesOfType(PREVIEW_VIEW_TYPE);
     let leaf = (_a2 = existing[0]) != null ? _a2 : null;
     if (!leaf) {
-      leaf = import_obsidian7.Platform.isMobile ? this.app.workspace.getLeaf("tab") : (_b2 = this.app.workspace.getRightLeaf(false)) != null ? _b2 : this.app.workspace.getLeaf("split", "vertical");
+      leaf = import_obsidian7.Platform.isMobile ? this.app.workspace.getLeaf(true) : (_b2 = this.app.workspace.getRightLeaf(false)) != null ? _b2 : this.app.workspace.getLeaf("split", "vertical");
       if (!leaf) {
         new import_obsidian7.Notice("\u65E0\u6CD5\u6253\u5F00 MarkNice \u9884\u89C8\u89C6\u56FE");
         return;
@@ -21747,6 +21747,7 @@ var MarkNicePlugin = class extends import_obsidian7.Plugin {
     if (!import_obsidian7.Platform.isMobile && this.app.workspace.rightSplit.collapsed) {
       this.app.workspace.rightSplit.expand();
     }
+    await this.app.workspace.revealLeaf(leaf);
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
   refreshPreview() {

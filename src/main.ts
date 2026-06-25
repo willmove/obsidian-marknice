@@ -477,7 +477,7 @@ export default class MarkNicePlugin extends Plugin {
     let leaf: WorkspaceLeaf | null = existing[0] ?? null;
     if (!leaf) {
       leaf = Platform.isMobile
-        ? this.app.workspace.getLeaf('tab')
+        ? this.app.workspace.getLeaf(true)
         : this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf('split', 'vertical');
       if (!leaf) {
         new Notice('无法打开 MarkNice 预览视图');
@@ -498,6 +498,7 @@ export default class MarkNicePlugin extends Plugin {
     if (!Platform.isMobile && this.app.workspace.rightSplit.collapsed) {
       this.app.workspace.rightSplit.expand();
     }
+    await this.app.workspace.revealLeaf(leaf);
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
 
