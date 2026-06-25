@@ -21739,15 +21739,14 @@ var MarkNicePlugin = class extends import_obsidian7.Plugin {
     } else {
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
-    await this.revealLeaf(leaf);
+    this.revealLeaf(leaf);
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
   }
-  async revealLeaf(leaf) {
+  revealLeaf(leaf) {
     if (!import_obsidian7.Platform.isMobile && this.app.workspace.rightSplit.collapsed) {
       this.app.workspace.rightSplit.expand();
     }
-    await this.app.workspace.revealLeaf(leaf);
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
   refreshPreview() {

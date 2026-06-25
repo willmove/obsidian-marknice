@@ -488,17 +488,16 @@ export default class MarkNicePlugin extends Plugin {
       // 面板已存在时，确保它可见。
       await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: true });
     }
-    await this.revealLeaf(leaf);
+    this.revealLeaf(leaf);
 
     const view = leaf.view;
     if (file && view instanceof WechatPreviewView) view.setFile(file);
   }
 
-  private async revealLeaf(leaf: WorkspaceLeaf): Promise<void> {
+  private revealLeaf(leaf: WorkspaceLeaf): void {
     if (!Platform.isMobile && this.app.workspace.rightSplit.collapsed) {
       this.app.workspace.rightSplit.expand();
     }
-    await this.app.workspace.revealLeaf(leaf);
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
 
