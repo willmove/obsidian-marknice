@@ -1,6 +1,6 @@
 # MarkNice WeChat
 
-MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当前 Markdown 笔记转换为适合微信公众号编辑器的内联样式 HTML，并提供实时预览、一键复制、Markdown 复制、HTML/Word/PDF 导出、直接发送到公众号草稿箱等能力。
+MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当前 Markdown 笔记转换为适合微信公众号编辑器的内联样式 HTML，并提供实时预览、一键复制、Markdown 复制、PDF OCR 导入、HTML/Word/PDF 导出、直接发送到公众号草稿箱等能力。
 
 - 当前版本：`0.6.6`
 - 最低 Obsidian 版本：`1.5.0`
@@ -14,7 +14,8 @@ MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当
 - **一键复制到公众号编辑器**：复制到公众号时写入 `text/html` 和 `text/plain`，样式全部内联到 `style` 属性，粘贴到公众号编辑器后尽量保持排版不变。
 - **一键复制 Markdown**：直接复制当前笔记的 Markdown 源文，便于粘贴到其它编辑器或平台。
 - **发送到公众号草稿箱**：通过微信公众号接口上传封面和正文图片，并创建草稿。
-- **HTML / Word / PDF 导出**：可把当前笔记另存为完整 `.html` 文件，也可导出为 `.docx` 或 `.pdf`；同时支持把 `.docx` 导入为 Markdown。
+- **导入 Word / PDF OCR**：支持把 `.docx` 导入为 Markdown，也可以调用 PaddleOCR 服务把 PDF 识别为 Markdown 草稿。
+- **HTML / Word / PDF 导出**：可把当前笔记另存为完整 `.html` 文件，也可导出为 `.docx` 或 `.pdf`。
 - **数学公式渲染**：使用 KaTeX 渲染行内公式 `$E=mc^2$` 与块级公式 `$$...$$`。
 - **Obsidian 语法适配**：支持图片嵌入、双链降级、高亮、Callout、任务列表、表格、代码块等常见写法。
 
@@ -51,7 +52,7 @@ MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当
 - 点击左侧栏的 **MarkNice: 公众号排版预览** 图标。
 - 在命令面板执行 **打开公众号排版预览**。
 
-预览面板会跟随当前打开的 Markdown 文件。顶部工具栏保留 **复制到公众号**、**发公众号草稿**、**导出** 和 **更多** 四个操作入口；另存 HTML、导出 Word、导出 PDF 收纳在 **导出** 菜单中，导入 Word 和复制 Markdown 收纳在 **更多** 菜单中。第二行工具栏支持调整字号、段距和预览模式。
+预览面板会跟随当前打开的 Markdown 文件。顶部工具栏保留 **复制到公众号**、**发公众号草稿**、**导出** 和 **更多** 四个操作入口；另存 HTML、导出 Word、导出 PDF 收纳在 **导出** 菜单中，导入 Word、导入 PDF OCR 和复制 Markdown 收纳在 **更多** 菜单中。第二行工具栏支持调整字号、段距和预览模式。
 
 ### 复制到公众号
 
@@ -95,9 +96,12 @@ MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当
 ### HTML、Word 与 PDF 导出
 
 - **导入 Word 文档为 Markdown**：选择本地 `.docx` 文件，插件会在当前目录或活动文件所在目录创建对应 Markdown 文件，并自动打开预览。
+- **导入 PDF 并 OCR 为 Markdown**：选择本地 `.pdf` 文件，插件会把 PDF 上传到设置中配置的 PaddleOCR jobs 接口，轮询识别结果，把返回的 Markdown 和图片保存到当前目录，并自动打开预览。
 - **另存当前笔记为 HTML**：将当前 Markdown 笔记转换为完整 `.html` 文件，文件会保存到当前笔记所在目录，若重名会自动追加序号。
 - **导出当前笔记为 Word 文档**：将当前 Markdown 笔记转换为 `.docx`，文件会保存到当前笔记所在目录，若重名会自动追加序号。
 - **导出当前笔记为 PDF 文档**：桌面端会直接生成 `.pdf` 并保存到当前笔记所在目录，若重名会自动追加序号，无需打开系统打印对话框。
+
+PDF OCR 使用前需要在「设置 -> MarkNice WeChat -> PDF OCR」中填写 PaddleOCR Token。默认任务接口为 `https://paddleocr.aistudio-app.com/api/v2/ocr/jobs`，默认模型为 `PaddleOCR-VL-1.6`。导入时插件会再次确认上传操作；请只对允许发送到外部 OCR 服务的 PDF 使用该功能。
 
 关于公式导出：Word 的 HTML 导入链路无法稳定还原 KaTeX 的排版结构，因此导出 Word 时公式会转换为线性可读文本，例如 `\frac{a+b}{c+d}` 会转换为 `(a+b)/(c+d)`。公众号预览与复制仍使用 KaTeX 渲染后的公式。
 
@@ -190,6 +194,7 @@ obsidian-marknice/
     ├── wechat-api.ts      # 微信公众号接口客户端
     ├── word.ts            # Word 导入 / 导出
     ├── pdf.ts             # PDF 生成
+    ├── paddle-ocr.ts      # PaddleOCR PDF 识别客户端
     ├── docx-parser.ts     # .docx 解析
     ├── html-to-markdown.ts # HTML 到 Markdown 转换
     └── vendor.d.ts        # 第三方库类型声明
@@ -214,7 +219,7 @@ obsidian-marknice/
 
 ## English Summary
 
-MarkNice WeChat is an Obsidian plugin for converting Markdown notes into WeChat Official Account articles. It provides themed formatting, live preview, rich-text copy, direct draft publishing through the WeChat API, Word import/export, KaTeX math rendering, and compatibility handling for common Obsidian syntax.
+MarkNice WeChat is an Obsidian plugin for converting Markdown notes into WeChat Official Account articles. It provides themed formatting, live preview, rich-text copy, PDF OCR import through PaddleOCR, direct draft publishing through the WeChat API, Word import/export, KaTeX math rendering, and compatibility handling for common Obsidian syntax.
 
 Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/marknice-wechat/`, then enable the plugin in Obsidian.
 
@@ -226,7 +231,7 @@ Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/
 
 ## English
 
-MarkNice WeChat is an Obsidian plugin that converts Markdown notes into WeChat Official Account-ready HTML. It provides live preview, themed formatting, one-click rich-text copy, Word import/export, math rendering, and direct draft publishing through the WeChat Official Account API.
+MarkNice WeChat is an Obsidian plugin that converts Markdown notes into WeChat Official Account-ready HTML. It provides live preview, themed formatting, one-click rich-text copy, PDF OCR import through PaddleOCR, Word import/export, math rendering, and direct publishing through the WeChat Official Account API.
 
 ### Highlights
 
@@ -238,6 +243,7 @@ MarkNice WeChat is an Obsidian plugin that converts Markdown notes into WeChat O
 - Direct publishing to the WeChat draft box
 - KaTeX-powered inline and block math
 - Word `.docx` import and export
+- PDF OCR import to Markdown through a configurable PaddleOCR jobs endpoint
 - Obsidian syntax support, including image embeds, wikilinks, highlights, callouts, task lists, tables, and code blocks
 
 ### Install

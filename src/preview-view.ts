@@ -204,6 +204,12 @@ export class WechatPreviewView extends ItemView {
     );
     menu.addItem((item) =>
       item
+        .setTitle('导入 PDF OCR')
+        .setIcon('scan-text')
+        .onClick(() => void this.plugin.importPdfWithOcr())
+    );
+    menu.addItem((item) =>
+      item
         .setTitle('复制 Markdown')
         .setIcon('copy')
         .setDisabled(!hasFile)

@@ -1,12 +1,19 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type MarkNicePlugin from './main';
 import { THEMES } from './themes';
+import { DEFAULT_PADDLE_OCR_JOB_URL, DEFAULT_PADDLE_OCR_MODEL } from './paddle-ocr';
 
 export type PreviewMode = 'desktop' | 'phone';
 
 export interface MarkNiceSettings {
   appId: string;
   appSecret: string;
+  paddleOcrToken: string;
+  paddleOcrJobUrl: string;
+  paddleOcrModel: string;
+  paddleOcrUseDocOrientationClassify: boolean;
+  paddleOcrUseDocUnwarping: boolean;
+  paddleOcrUseChartRecognition: boolean;
   defaultTheme: string;
   defaultAuthor: string;
   includeTitleInBody: boolean;
@@ -21,6 +28,12 @@ export interface MarkNiceSettings {
 export const DEFAULT_SETTINGS: MarkNiceSettings = {
   appId: '',
   appSecret: '',
+  paddleOcrToken: '',
+  paddleOcrJobUrl: DEFAULT_PADDLE_OCR_JOB_URL,
+  paddleOcrModel: DEFAULT_PADDLE_OCR_MODEL,
+  paddleOcrUseDocOrientationClassify: false,
+  paddleOcrUseDocUnwarping: false,
+  paddleOcrUseChartRecognition: false,
   defaultTheme: 'claude',
   defaultAuthor: '',
   includeTitleInBody: false,
@@ -157,5 +170,80 @@ export class MarkNiceSettingTab extends PluginSettingTab {
     tip.createSpan({
       text: '（公众平台 → 设置与开发 → 基本配置）。草稿箱接口需要已认证的公众号。',
     });
+
+    new Setting(containerEl).setName('PDF OCR').setHeading();
+
+    new Setting(containerEl)
+      .setName('PaddleOCR Token')
+      .setDesc('用于调用百度 AI Studio PaddleOCR 异步接口。PDF 内容会发送到该服务，请仅对可上传的文档使用。')
+      .addText((text) => {
+        text
+          .setPlaceholder('bearer token 或 token 原文')
+          .setValue(this.plugin.settings.paddleOcrToken)
+          .onChange(async (value) => {
+            this.plugin.settings.paddleOcrToken = value.trim();
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.type = 'password';
+        text.inputEl.addClass('mn-wide-input');
+      });
+
+    new Setting(containerEl)
+      .setName('OCR 任务接口')
+      .setDesc('默认使用百度 PaddleOCR jobs 接口，也可以改为兼容的自建服务地址。')
+      .addText((text) => {
+        text
+          .setPlaceholder(DEFAULT_PADDLE_OCR_JOB_URL)
+          .setValue(this.plugin.settings.paddleOcrJobUrl)
+          .onChange(async (value) => {
+            this.plugin.settings.paddleOcrJobUrl = value.trim() || DEFAULT_PADDLE_OCR_JOB_URL;
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.addClass('mn-wide-input');
+      });
+
+    new Setting(containerEl)
+      .setName('OCR 模型')
+      .setDesc('默认使用 PaddleOCR-VL-1.6。')
+      .addText((text) => {
+        text
+          .setPlaceholder(DEFAULT_PADDLE_OCR_MODEL)
+          .setValue(this.plugin.settings.paddleOcrModel)
+          .onChange(async (value) => {
+            this.plugin.settings.paddleOcrModel = value.trim() || DEFAULT_PADDLE_OCR_MODEL;
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.addClass('mn-wide-input');
+      });
+
+    new Setting(containerEl)
+      .setName('图片方向矫正')
+      .setDesc('开启后会请求 OCR 服务自动识别并矫正文档方向，可能增加处理时间。')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.paddleOcrUseDocOrientationClassify).onChange(async (value) => {
+          this.plugin.settings.paddleOcrUseDocOrientationClassify = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName('图片扭曲矫正')
+      .setDesc('开启后会请求 OCR 服务矫正弯曲、倾斜等文档图像。')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.paddleOcrUseDocUnwarping).onChange(async (value) => {
+          this.plugin.settings.paddleOcrUseDocUnwarping = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName('图表识别')
+      .setDesc('开启后会请求 OCR 服务解析图表，处理较慢但对含图表 PDF 更有帮助。')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.paddleOcrUseChartRecognition).onChange(async (value) => {
+          this.plugin.settings.paddleOcrUseChartRecognition = value;
+          await this.plugin.saveSettings();
+        })
+      );
   }
 }

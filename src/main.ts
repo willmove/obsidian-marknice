@@ -6,11 +6,40 @@ import { PublishModal } from './publish-modal';
 import { WechatTheme, getTheme } from './themes';
 import { createWordDocumentBlob, docxArrayBufferToMarkdown } from './word';
 import { buildPrintableHtml, createPdfArrayBuffer } from './pdf';
+import { DEFAULT_PADDLE_OCR_JOB_URL, DEFAULT_PADDLE_OCR_MODEL, pdfToMarkdownWithPaddleOcr } from './paddle-ocr';
+import { normalizeOcrInlineMath } from './markdown-cleanup';
 
 const DOCX_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const PDF_ACCEPT = '.pdf,application/pdf';
+const KNOWN_FILE_EXTENSION = /\.(?:md|markdown|docx|pdf|html?|png|jpe?g|gif|webp|bmp|svg)$/i;
+const WINDOWS_RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 function sanitizeFileBaseName(name: string): string {
-  return name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim() || 'Untitled';
+  const withoutKnownExtension = name.replace(KNOWN_FILE_EXTENSION, '');
+  const safe = withoutKnownExtension
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[. ]+|[. ]+$/g, '')
+    .trim();
+  if (!safe) return 'Untitled';
+  return WINDOWS_RESERVED_NAME.test(safe) ? `${safe}_` : safe;
+}
+
+function sanitizeRelativeAssetPath(path: string, fallback: string): string {
+  const clean = path
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((part) => part && part !== '.' && part !== '..')
+    .map((part) => part.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join('/');
+  return clean || fallback;
+}
+
+function extensionFromPath(path: string, fallback: string): string {
+  const filename = path.split('/').pop() ?? '';
+  const match = filename.match(/\.([A-Za-z0-9]+)$/);
+  return match?.[1] ?? fallback;
 }
 
 export default class MarkNicePlugin extends Plugin {
@@ -66,6 +95,12 @@ export default class MarkNicePlugin extends Plugin {
       id: 'import-word-document',
       name: '导入 Word 文档为 Markdown',
       callback: () => void this.importWordDocument(),
+    });
+
+    this.addCommand({
+      id: 'import-pdf-with-ocr',
+      name: '导入 PDF 并 OCR 为 Markdown',
+      callback: () => void this.importPdfWithOcr(),
     });
 
     this.addCommand({
@@ -226,6 +261,51 @@ export default class MarkNicePlugin extends Plugin {
     }
   }
 
+  async importPdfWithOcr(): Promise<void> {
+    const picked = await this.pickPdfFile();
+    if (!picked) return;
+
+    if (!this.settings.paddleOcrToken.trim()) {
+      new Notice('请先在「设置 -> MarkNice WeChat -> PDF OCR」中填写 PaddleOCR Token');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `将把 PDF「${picked.name}」上传到 PaddleOCR 服务进行识别，并把返回结果保存为 Markdown。请确认该文档可以发送到外部服务。`
+    );
+    if (!confirmed) return;
+
+    try {
+      new Notice('正在提交 PDF OCR 任务...');
+      const result = await pdfToMarkdownWithPaddleOcr(picked, {
+        jobUrl: this.settings.paddleOcrJobUrl || DEFAULT_PADDLE_OCR_JOB_URL,
+        token: this.settings.paddleOcrToken,
+        model: this.settings.paddleOcrModel || DEFAULT_PADDLE_OCR_MODEL,
+        useDocOrientationClassify: this.settings.paddleOcrUseDocOrientationClassify,
+        useDocUnwarping: this.settings.paddleOcrUseDocUnwarping,
+        useChartRecognition: this.settings.paddleOcrUseChartRecognition,
+      });
+
+      const folder = this.getActiveFolderPath();
+      const baseName = `${sanitizeFileBaseName(picked.name)}_pdf`;
+      const assetFolderName = `${baseName}.assets`;
+      const imagePathMap = await this.saveOcrImages(folder, assetFolderName, result.images);
+      let markdown = normalizeOcrInlineMath(result.markdown);
+      for (const [source, target] of Object.entries(imagePathMap)) {
+        markdown = markdown.split(source).join(target);
+      }
+
+      const path = this.getAvailableVaultPath(folder, baseName, 'md');
+      const created = await this.app.vault.create(path, markdown.endsWith('\n') ? markdown : `${markdown}\n`);
+      await this.app.workspace.getLeaf(true).openFile(created);
+      new Notice(`已导入 PDF OCR：${created.path}`);
+      await this.openPreview();
+    } catch (err) {
+      console.error('[MarkNice WeChat] import PDF OCR failed', err);
+      new Notice(`导入 PDF OCR 失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   async exportWordDocument(file: TFile): Promise<void> {
     try {
       new Notice('正在生成 Word 文档...');
@@ -276,10 +356,18 @@ export default class MarkNicePlugin extends Plugin {
   }
 
   private pickWordFile(): Promise<File | null> {
+    return this.pickLocalFile(DOCX_ACCEPT);
+  }
+
+  private pickPdfFile(): Promise<File | null> {
+    return this.pickLocalFile(PDF_ACCEPT);
+  }
+
+  private pickLocalFile(accept: string): Promise<File | null> {
     return new Promise((resolve) => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = DOCX_ACCEPT;
+      input.accept = accept;
       input.classList.add('mn-file-input-hidden');
       let finished = false;
 
@@ -295,6 +383,52 @@ export default class MarkNicePlugin extends Plugin {
       document.body.appendChild(input);
       input.click();
     });
+  }
+
+  private async saveOcrImages(
+    folder: string,
+    assetFolderName: string,
+    images: Record<string, ArrayBuffer>
+  ): Promise<Record<string, string>> {
+    const pathMap: Record<string, string> = {};
+    const entries = Object.entries(images);
+    if (!entries.length) return pathMap;
+
+    const assetRoot = normalizePath(folder ? `${folder}/${assetFolderName}` : assetFolderName);
+    await this.ensureVaultFolder(assetRoot);
+
+    let index = 1;
+    for (const [sourcePath, bytes] of entries) {
+      const relativePath = sanitizeRelativeAssetPath(sourcePath, `image-${index}.jpg`);
+      const targetRelativePath = normalizePath(`${assetFolderName}/${relativePath}`);
+      const vaultPath = normalizePath(folder ? `${folder}/${targetRelativePath}` : targetRelativePath);
+      const parent = vaultPath.includes('/') ? vaultPath.slice(0, vaultPath.lastIndexOf('/')) : '';
+      if (parent) await this.ensureVaultFolder(parent);
+      const availablePath = this.getAvailableVaultPath(
+        parent,
+        sanitizeFileBaseName(vaultPath.split('/').pop() ?? `image-${index}`),
+        extensionFromPath(vaultPath, 'jpg')
+      );
+      const created = await this.app.vault.createBinary(availablePath, bytes);
+      const relativeToMarkdown = folder && created.path.startsWith(`${folder}/`)
+        ? created.path.slice(folder.length + 1)
+        : created.path;
+      pathMap[sourcePath] = relativeToMarkdown;
+      index++;
+    }
+
+    return pathMap;
+  }
+
+  private async ensureVaultFolder(path: string): Promise<void> {
+    if (!path || this.app.vault.getAbstractFileByPath(path)) return;
+    const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+    if (parent) await this.ensureVaultFolder(parent);
+    try {
+      await this.app.vault.createFolder(path);
+    } catch (err) {
+      if (!this.app.vault.getAbstractFileByPath(path)) throw err;
+    }
   }
 
   private async getMarkdownContent(file: TFile): Promise<string> {
