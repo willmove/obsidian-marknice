@@ -108,6 +108,72 @@ function setChildrenFromHtml(el: Element, html: string): void {
   el.replaceChildren(htmlToNodes(html));
 }
 
+/**
+ * 把元素内文本节点中的「软换行」（换行+缩进空白）归一为单个空格。
+ *
+ * marked 在跨行的列表项里会留下字面 \n（例如
+ *   <li><strong>粗体</strong>\n后面的文字</li>）。
+ * 浏览器渲染时会把它折叠成空格，但公众号编辑器导入/粘贴 HTML 时，
+ * 会把 <li> 内行内元素后紧跟的 \n 当作 <br>，导致粗体/行内代码等
+ * 后面的文字被强制断行。这里显式归一，既保留软换行的「一个空格」语义，
+ * 又避免公众号编辑器误判。跳过 <pre> 与公式块，以免破坏代码与公式格式。
+ */
+function normalizeSoftWraps(root: Element): void {
+  const doc = root.ownerDocument;
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const targets: Text[] = [];
+  let node = walker.nextNode();
+  while (node) {
+    if (node.parentElement?.closest('pre, .math-block')) {
+      node = walker.nextNode();
+      continue;
+    }
+    targets.push(node as Text);
+    node = walker.nextNode();
+  }
+  for (const t of targets) {
+    const v = t.nodeValue ?? '';
+    if (!v.includes('\n')) continue;
+    t.nodeValue = v.replace(/[ \t]*\n[ \t]*/g, ' ');
+  }
+}
+
+/**
+ * 在公众号会误判为块边界的行首行内元素前插入不可见的 LRM（U+200E）。
+ *
+ * 微信编辑器会把列表项/表格单元格开头的 <strong>/<b>，以及其中的行内
+ * <code>，拆成独立一行。LRM 让这些标签前存在一个零宽文本节点，从而保持
+ * 后续正文与行内元素处于同一行。此兼容处理与 Web 版 sanitizeForWechat 一致。
+ */
+function insertWechatInlineBoundaryMarks(root: Element): void {
+  const doc = root.ownerDocument;
+
+  root.querySelectorAll('li code,td code,th code').forEach((el) => {
+    if (el.closest('pre')) return;
+    el.parentNode?.insertBefore(doc.createTextNode('\u200E'), el);
+  });
+
+  root.querySelectorAll('li strong,td strong,th strong,li b,td b,th b').forEach((el) => {
+    if (el.previousSibling) return;
+    el.parentNode?.insertBefore(doc.createTextNode('\u200E'), el);
+  });
+}
+
+/**
+ * marked 会把独占一段的 Markdown 图片输出为 <p><img></p>。如果再直接把
+ * img 替换成块级 figure，就会得到无效的 <p><figure></figure></p>；公众号
+ * 编辑器修复这种结构时通常会在 figure 两侧补出空段落，表现为图片上下多一行。
+ */
+function isImageOnlyParagraph(p: HTMLParagraphElement): boolean {
+  if (!p.querySelector('img')) return false;
+  if ((p.textContent ?? '').replace(/\u00a0/g, ' ').trim()) return false;
+
+  return Array.from(p.querySelectorAll('*')).every((el) => {
+    if (el.tagName.toLowerCase() === 'img') return true;
+    return Boolean(el.querySelector('img'));
+  });
+}
+
 /** 按偏移量缩放样式串中的 font-size 与上下 margin（与 Web 版 scaledStyle 同思路） */
 function scaleStyle(style: string, fontOffset: number, spacingOffset: number): string {
   let s = style;
@@ -326,10 +392,10 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     setStyle(
       p,
       isWarmred
-        ? st('font-size:15px;line-height:2.0;margin:14px 0;color:#3b2e2a;text-align:justify;letter-spacing:.3px;word-break:break-word;')
+        ? st('font-size:14px;line-height:2.0;margin:14px 0;color:#3b2e2a;text-align:justify;letter-spacing:.3px;word-break:break-word;')
         : isAmber
-          ? st('font-size:15px;line-height:2.0;margin:18px 0;color:#2c2c2c;text-align:justify;letter-spacing:.2px;word-break:break-word;')
-        : st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`)
+          ? st('font-size:14px;line-height:2.0;margin:18px 0;color:#2c2c2c;text-align:justify;letter-spacing:.2px;word-break:break-word;')
+        : st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:15px;word-break:break-word;text-align:justify;`)
     );
   });
 
@@ -435,9 +501,9 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     setStyle(
       el,
       isWarmred
-        ? st('margin:18px 0;padding:14px 18px;border-left:4px solid #c0392b;background:#fef5f0;color:#7a2e1f;font-size:14px;line-height:1.9;border-radius:0 8px 8px 0;')
+        ? st('margin:18px 0;padding:14px 18px;border-left:4px solid #c0392b;background:#fef5f0;color:#7a2e1f;font-size:13px;line-height:1.9;border-radius:0 8px 8px 0;')
         : isAmber
-          ? st('margin:20px 0;padding:14px 18px;border-left:4px solid #c8722a;background:#fdf5ec;color:#7a4010;font-size:14px;line-height:1.95;border-radius:0 8px 8px 0;')
+          ? st('margin:20px 0;padding:14px 18px;border-left:4px solid #c8722a;background:#fdf5ec;color:#7a4010;font-size:13px;line-height:1.95;border-radius:0 8px 8px 0;')
         : st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
     );
   });
@@ -462,8 +528,8 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
         el,
         st(
           tag === 'ol'
-            ? 'margin:16px 0;padding-left:0;line-height:2.0;color:#2c2c2c;font-size:15px;list-style:none;'
-            : 'margin:16px 0;padding-left:22px;line-height:2.0;color:#2c2c2c;font-size:15px;'
+            ? 'margin:16px 0;padding-left:0;line-height:2.0;color:#2c2c2c;font-size:14px;list-style:none;'
+            : 'margin:16px 0;padding-left:22px;line-height:2.0;color:#2c2c2c;font-size:14px;'
         )
       );
     } else {
@@ -479,7 +545,8 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     for (const node of Array.from(el.childNodes)) {
       if (node.nodeType === 3 && !(node.textContent ?? '').trim()) node.remove();
     }
-    setStyle(el, isAmber ? st('margin:10px 0;') : st(`margin:6px 0;font-size:16px;`));
+    normalizeSoftWraps(el);
+    setStyle(el, isAmber ? st('margin:10px 0;') : st(`margin:6px 0;font-size:15px;`));
   });
   if (isAmber) applyAmberOrderedListMarkers(body);
 
@@ -495,8 +562,8 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
       el,
       `<pre style="${st(
         isAmber
-          ? 'background:#fdf5ec;border:1px solid #f0d5b0;border-radius:8px;padding:14px;overflow:auto;line-height:1.65;font-size:12px;color:#a05a20;font-family:Menlo,Consolas,monospace;white-space:normal;word-break:break-all;margin:18px 0;'
-          : `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+          ? 'background:#fdf5ec;border:1px solid #f0d5b0;border-radius:8px;padding:14px;overflow:auto;line-height:1.65;font-size:11px;color:#a05a20;font-family:Menlo,Consolas,monospace;white-space:normal;word-break:break-all;margin:18px 0;'
+          : `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:13px;line-height:1.7;white-space:normal;word-break:break-all;`
       )}">${codeHtml}</pre>`
     );
   });
@@ -538,28 +605,32 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     el.removeAttribute('target');
   });
 
-  body.querySelectorAll('img').forEach((el) => {
-    const alt = el.getAttribute('alt') ?? '';
-    const src = el.getAttribute('src') ?? '';
-    // 不渲染图片标题（figcaption）：避免文件名等 alt 文本出现在图片下方
-    replaceWithHtml(
-      el,
-      `<figure style="${st(isAmber ? 'margin:0;text-align:center;' : 'margin:20px 0;text-align:center;')}"><img src="${src}" alt="${escapeHtml(
-        alt
-      )}" style="${
-        isAmber
-          ? 'max-width:100%;height:auto;border-radius:8px;display:block;margin:24px auto;'
-          : 'max-width:100%;height:auto;border-radius:8px;display:inline-block;'
-      }" /></figure>`
-    );
+  const figureStyle = st(isAmber ? 'margin:0;text-align:center;' : 'margin:20px 0;text-align:center;');
+  const imageStyle = isAmber
+    ? 'max-width:100%;height:auto;border-radius:8px;display:block;margin:24px auto;'
+    : 'max-width:100%;height:auto;border-radius:8px;display:inline-block;';
+
+  body.querySelectorAll('img').forEach((el) => setStyle(el, imageStyle));
+
+  // 把图片独占的段落整体替换为 figure，避免生成 p > figure 的无效嵌套。
+  // 图片与文字混排时只保留 img，不插入块级容器。
+  body.querySelectorAll<HTMLParagraphElement>('p').forEach((p) => {
+    if (!isImageOnlyParagraph(p)) return;
+    const figure = p.ownerDocument.createElement('figure');
+    setStyle(figure, figureStyle);
+    while (p.firstChild) figure.appendChild(p.firstChild);
+    p.replaceWith(figure);
   });
+
+  // 原始 HTML 中已有的 figure 也统一样式，且不再嵌套一层 figure。
+  body.querySelectorAll('figure').forEach((figure) => setStyle(figure, figureStyle));
 
   body.querySelectorAll('table').forEach((el) => {
     setStyle(
       el,
       isAmber
-        ? st('border-collapse:collapse;width:100%;margin:16px 0;font-size:13px;')
-        : st('width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;')
+        ? st('border-collapse:collapse;width:100%;margin:16px 0;font-size:12px;')
+        : st('width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;')
     );
   });
   body.querySelectorAll('th').forEach((el) => {
@@ -581,7 +652,7 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
   body.querySelectorAll('.math-block').forEach((el) => {
     setStyle(
       el,
-      st(`display:block;margin:18px 0;text-align:center;overflow-x:auto;line-height:1.5;color:${theme.text};font-size:16px;`)
+      st(`display:block;margin:18px 0;text-align:center;overflow-x:auto;line-height:1.5;color:${theme.text};font-size:15px;`)
     );
   });
   body.querySelectorAll('.math-inline').forEach((el) => {
@@ -705,6 +776,7 @@ export async function convertFileToWechat(
   const firstImage = await resolveImages(app, body, file.path);
   const plainText = (body.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
   renderMathInElement(body);
+  insertWechatInlineBoundaryMarks(body);
 
   const titleHtml = options.includeTitleInBody
     ? isAmber
@@ -742,7 +814,7 @@ export async function convertFileToWechat(
   const sectionStyle = isAmber
     ? `font-family:${theme.bodyFont};word-break:break-word;color:${theme.text};${pageBgStyle}`
     : `font-family:${theme.bodyFont};font-size:${Math.max(
-        16 + fontOffset,
+        15 + fontOffset,
         9
       )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}`;
   const html = `<section style="${sectionStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;

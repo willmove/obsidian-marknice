@@ -17093,6 +17093,48 @@ function replaceWithHtml(el, html2) {
 function setChildrenFromHtml2(el, html2) {
   el.replaceChildren(htmlToNodes(html2));
 }
+function normalizeSoftWraps(root) {
+  var _a2, _b2;
+  const doc = root.ownerDocument;
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const targets = [];
+  let node = walker.nextNode();
+  while (node) {
+    if ((_a2 = node.parentElement) == null ? void 0 : _a2.closest("pre, .math-block")) {
+      node = walker.nextNode();
+      continue;
+    }
+    targets.push(node);
+    node = walker.nextNode();
+  }
+  for (const t of targets) {
+    const v = (_b2 = t.nodeValue) != null ? _b2 : "";
+    if (!v.includes("\n")) continue;
+    t.nodeValue = v.replace(/[ \t]*\n[ \t]*/g, " ");
+  }
+}
+function insertWechatInlineBoundaryMarks(root) {
+  const doc = root.ownerDocument;
+  root.querySelectorAll("li code,td code,th code").forEach((el) => {
+    var _a2;
+    if (el.closest("pre")) return;
+    (_a2 = el.parentNode) == null ? void 0 : _a2.insertBefore(doc.createTextNode("\u200E"), el);
+  });
+  root.querySelectorAll("li strong,td strong,th strong,li b,td b,th b").forEach((el) => {
+    var _a2;
+    if (el.previousSibling) return;
+    (_a2 = el.parentNode) == null ? void 0 : _a2.insertBefore(doc.createTextNode("\u200E"), el);
+  });
+}
+function isImageOnlyParagraph(p) {
+  var _a2;
+  if (!p.querySelector("img")) return false;
+  if (((_a2 = p.textContent) != null ? _a2 : "").replace(/\u00a0/g, " ").trim()) return false;
+  return Array.from(p.querySelectorAll("*")).every((el) => {
+    if (el.tagName.toLowerCase() === "img") return true;
+    return Boolean(el.querySelector("img"));
+  });
+}
 function scaleStyle(style, fontOffset, spacingOffset) {
   let s = style;
   if (fontOffset) {
@@ -17251,7 +17293,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
   body.querySelectorAll("p").forEach((p) => {
     setStyle(
       p,
-      isWarmred ? st("font-size:15px;line-height:2.0;margin:14px 0;color:#3b2e2a;text-align:justify;letter-spacing:.3px;word-break:break-word;") : isAmber ? st("font-size:15px;line-height:2.0;margin:18px 0;color:#2c2c2c;text-align:justify;letter-spacing:.2px;word-break:break-word;") : st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:16px;word-break:break-word;text-align:justify;`)
+      isWarmred ? st("font-size:14px;line-height:2.0;margin:14px 0;color:#3b2e2a;text-align:justify;letter-spacing:.3px;word-break:break-word;") : isAmber ? st("font-size:14px;line-height:2.0;margin:18px 0;color:#2c2c2c;text-align:justify;letter-spacing:.2px;word-break:break-word;") : st(`margin:16px 0;line-height:1.9;color:${theme.text};font-size:15px;word-break:break-word;text-align:justify;`)
     );
   });
   body.querySelectorAll("h1").forEach((el) => {
@@ -17342,7 +17384,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
   body.querySelectorAll("blockquote").forEach((el) => {
     setStyle(
       el,
-      isWarmred ? st("margin:18px 0;padding:14px 18px;border-left:4px solid #c0392b;background:#fef5f0;color:#7a2e1f;font-size:14px;line-height:1.9;border-radius:0 8px 8px 0;") : isAmber ? st("margin:20px 0;padding:14px 18px;border-left:4px solid #c8722a;background:#fdf5ec;color:#7a4010;font-size:14px;line-height:1.95;border-radius:0 8px 8px 0;") : st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
+      isWarmred ? st("margin:18px 0;padding:14px 18px;border-left:4px solid #c0392b;background:#fef5f0;color:#7a2e1f;font-size:13px;line-height:1.9;border-radius:0 8px 8px 0;") : isAmber ? st("margin:20px 0;padding:14px 18px;border-left:4px solid #c8722a;background:#fdf5ec;color:#7a4010;font-size:13px;line-height:1.95;border-radius:0 8px 8px 0;") : st(`margin:18px 0;padding:12px 16px;background:${theme.quoteBg};border-left:4px solid ${theme.quoteBorder};color:${theme.text};border-radius:6px;`)
     );
   });
   body.querySelectorAll('li > input[type="checkbox"]').forEach((input) => {
@@ -17363,7 +17405,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
       setStyle(
         el,
         st(
-          tag2 === "ol" ? "margin:16px 0;padding-left:0;line-height:2.0;color:#2c2c2c;font-size:15px;list-style:none;" : "margin:16px 0;padding-left:22px;line-height:2.0;color:#2c2c2c;font-size:15px;"
+          tag2 === "ol" ? "margin:16px 0;padding-left:0;line-height:2.0;color:#2c2c2c;font-size:14px;list-style:none;" : "margin:16px 0;padding-left:22px;line-height:2.0;color:#2c2c2c;font-size:14px;"
         )
       );
     } else {
@@ -17380,7 +17422,8 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     for (const node of Array.from(el.childNodes)) {
       if (node.nodeType === 3 && !((_b3 = node.textContent) != null ? _b3 : "").trim()) node.remove();
     }
-    setStyle(el, isAmber ? st("margin:10px 0;") : st(`margin:6px 0;font-size:16px;`));
+    normalizeSoftWraps(el);
+    setStyle(el, isAmber ? st("margin:10px 0;") : st(`margin:6px 0;font-size:15px;`));
   });
   if (isAmber) applyAmberOrderedListMarkers(body);
   body.querySelectorAll("pre").forEach((el) => {
@@ -17390,7 +17433,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     replaceWithHtml(
       el,
       `<pre style="${st(
-        isAmber ? "background:#fdf5ec;border:1px solid #f0d5b0;border-radius:8px;padding:14px;overflow:auto;line-height:1.65;font-size:12px;color:#a05a20;font-family:Menlo,Consolas,monospace;white-space:normal;word-break:break-all;margin:18px 0;" : `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.7;white-space:normal;word-break:break-all;`
+        isAmber ? "background:#fdf5ec;border:1px solid #f0d5b0;border-radius:8px;padding:14px;overflow:auto;line-height:1.65;font-size:11px;color:#a05a20;font-family:Menlo,Consolas,monospace;white-space:normal;word-break:break-all;margin:18px 0;" : `margin:18px 0;padding:14px 16px;overflow:auto;background:${theme.codeBg};border-radius:8px;color:${codeText};font-family:Menlo,Consolas,monospace;font-size:13px;line-height:1.7;white-space:normal;word-break:break-all;`
       )}">${codeHtml}</pre>`
     );
   });
@@ -17424,21 +17467,21 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     );
     el.removeAttribute("target");
   });
-  body.querySelectorAll("img").forEach((el) => {
-    var _a3, _b3;
-    const alt = (_a3 = el.getAttribute("alt")) != null ? _a3 : "";
-    const src = (_b3 = el.getAttribute("src")) != null ? _b3 : "";
-    replaceWithHtml(
-      el,
-      `<figure style="${st(isAmber ? "margin:0;text-align:center;" : "margin:20px 0;text-align:center;")}"><img src="${src}" alt="${escapeHtml2(
-        alt
-      )}" style="${isAmber ? "max-width:100%;height:auto;border-radius:8px;display:block;margin:24px auto;" : "max-width:100%;height:auto;border-radius:8px;display:inline-block;"}" /></figure>`
-    );
+  const figureStyle = st(isAmber ? "margin:0;text-align:center;" : "margin:20px 0;text-align:center;");
+  const imageStyle = isAmber ? "max-width:100%;height:auto;border-radius:8px;display:block;margin:24px auto;" : "max-width:100%;height:auto;border-radius:8px;display:inline-block;";
+  body.querySelectorAll("img").forEach((el) => setStyle(el, imageStyle));
+  body.querySelectorAll("p").forEach((p) => {
+    if (!isImageOnlyParagraph(p)) return;
+    const figure = p.ownerDocument.createElement("figure");
+    setStyle(figure, figureStyle);
+    while (p.firstChild) figure.appendChild(p.firstChild);
+    p.replaceWith(figure);
   });
+  body.querySelectorAll("figure").forEach((figure) => setStyle(figure, figureStyle));
   body.querySelectorAll("table").forEach((el) => {
     setStyle(
       el,
-      isAmber ? st("border-collapse:collapse;width:100%;margin:16px 0;font-size:13px;") : st("width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;")
+      isAmber ? st("border-collapse:collapse;width:100%;margin:16px 0;font-size:12px;") : st("width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;")
     );
   });
   body.querySelectorAll("th").forEach((el) => {
@@ -17456,7 +17499,7 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
   body.querySelectorAll(".math-block").forEach((el) => {
     setStyle(
       el,
-      st(`display:block;margin:18px 0;text-align:center;overflow-x:auto;line-height:1.5;color:${theme.text};font-size:16px;`)
+      st(`display:block;margin:18px 0;text-align:center;overflow-x:auto;line-height:1.5;color:${theme.text};font-size:15px;`)
     );
   });
   body.querySelectorAll(".math-inline").forEach((el) => {
@@ -17550,6 +17593,7 @@ async function convertFileToWechat(app, file, options2) {
   const firstImage = await resolveImages(app, body, file.path);
   const plainText = ((_e = body.textContent) != null ? _e : "").replace(/\n{3,}/g, "\n\n").trim();
   renderMathInElement(body);
+  insertWechatInlineBoundaryMarks(body);
   const titleHtml = options2.includeTitleInBody ? isAmber ? amberHeadingHtml("h1", title, fontOffset, spacingOffset, "0px 0 28px") : theme.headingVariant === "ribbon" ? ribbonHeadingHtml(theme, title, fontOffset, spacingOffset, {
     margin: "0px 0 24px",
     fontSize: 26,
@@ -17573,7 +17617,7 @@ async function convertFileToWechat(app, file, options2) {
   })}">${escapeHtml2(title)}</h1>` : "";
   const pageBgStyle = theme.pageBg ? `background:${theme.pageBg};${theme.pageBgSize ? `background-size:${theme.pageBgSize};` : ""}padding:24px 20px;border-radius:8px;` : "";
   const sectionStyle = isAmber ? `font-family:${theme.bodyFont};word-break:break-word;color:${theme.text};${pageBgStyle}` : `font-family:${theme.bodyFont};font-size:${Math.max(
-    16 + fontOffset,
+    15 + fontOffset,
     9
   )}px;color:${theme.text};line-height:1.9;letter-spacing:0.5px;${pageBgStyle}`;
   const html2 = `<section style="${sectionStyle}">${titleHtml}${body.innerHTML.trim()}</section>`;
