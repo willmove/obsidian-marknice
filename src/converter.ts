@@ -12,6 +12,8 @@ export interface ConvertOptions {
   fontSizeOffset?: number;
   /** 段距偏移（px），调整块级元素上下外边距 */
   paraSpacingOffset?: number;
+  /** 公式栅格化为 PNG 图片（发草稿路径，规避服务端对 <svg> 的清洗） */
+  mathAsImage?: boolean;
 }
 
 export interface ConvertResult {
@@ -656,7 +658,8 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     );
   });
   body.querySelectorAll('.math-inline').forEach((el) => {
-    setStyle(el, `display:inline-block;vertical-align:middle;color:${theme.text};font-size:1em;`);
+    // 行内公式对齐靠 MathJax SVG 自带的 vertical-align，容器不要干预布局
+    setStyle(el, `color:${theme.text};font-size:1em;`);
   });
 
   leftAlignReferenceSection(body);
@@ -775,7 +778,7 @@ export async function convertFileToWechat(
   applyThemeStyles(body, theme, fontOffset, spacingOffset);
   const firstImage = await resolveImages(app, body, file.path);
   const plainText = (body.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
-  renderMathInElement(body);
+  await renderMathInElement(body, options.mathAsImage ?? false);
   insertWechatInlineBoundaryMarks(body);
 
   const titleHtml = options.includeTitleInBody

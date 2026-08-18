@@ -1,16 +1,2 @@
-declare module 'katex' {
-  type KatexOutput = 'html' | 'mathml' | 'htmlAndMathml';
-
-  type KatexOptions = {
-    displayMode?: boolean;
-    throwOnError?: boolean;
-    strict?: boolean | string;
-    output?: KatexOutput;
-  };
-
-  const katex: {
-    renderToString(tex: string, options?: KatexOptions): string;
-  };
-
-  export default katex;
-}
+// 第三方库类型补充声明（mathjax-full 自带 .d.ts，无需在此声明）
+export {};

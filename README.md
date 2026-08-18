@@ -16,7 +16,7 @@ MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当
 - **发送到公众号草稿箱**：通过微信公众号接口上传封面和正文图片，并创建草稿。
 - **导入 Word / PDF OCR**：支持把 `.docx` 导入为 Markdown，也可以调用 PaddleOCR 服务把 PDF 识别为 Markdown 草稿。
 - **HTML / Word / PDF 导出**：可把当前笔记另存为完整 `.html` 文件，也可导出为 `.docx` 或 `.pdf`。
-- **数学公式渲染**：使用 KaTeX 渲染行内公式 `$E=mc^2$` 与块级公式 `$$...$$`。
+- **数学公式渲染**：使用 MathJax 把行内公式 `$E=mc^2$` 与块级公式 `$$...$$` 渲染为矢量 SVG，粘贴到公众号后仍清晰、随字号缩放。
 - **Obsidian 语法适配**：支持图片嵌入、双链降级、高亮、Callout、任务列表、表格、代码块等常见写法。
 
 ## 安装
@@ -103,7 +103,9 @@ MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当
 
 PDF OCR 使用前需要在「设置 -> MarkNice WeChat -> PDF OCR」中填写 PaddleOCR Token。默认任务接口为 `https://paddleocr.aistudio-app.com/api/v2/ocr/jobs`，默认模型为 `PaddleOCR-VL-1.6`。导入时插件会再次确认上传操作；请只对允许发送到外部 OCR 服务的 PDF 使用该功能。
 
-关于公式导出：Word 的 HTML 导入链路无法稳定还原 KaTeX 的排版结构，因此导出 Word 时公式会转换为线性可读文本，例如 `\frac{a+b}{c+d}` 会转换为 `(a+b)/(c+d)`。公众号预览与复制仍使用 KaTeX 渲染后的公式。
+关于公式导出：Word 的 HTML 导入链路无法稳定还原公式排版，因此导出 Word 时公式会转换为线性可读文本，例如 `\frac{a+b}{c+d}` 会转换为 `(a+b)/(c+d)`。公众号预览与复制使用 MathJax 渲染的矢量 SVG 公式。
+
+关于公众号公式：公众号编辑器不支持 MathML，粘贴时还会过滤 `position`/`top` 等 CSS 定位属性，KaTeX 这类 span+CSS 排版必然散架。插件采用与 MdNice 相同的方案：用 MathJax 把公式渲染为**纯矢量 SVG**（全部是 path/rect，不依赖 CSS 定位，天然免疫微信的样式过滤），公式颜色跟随正文（`currentColor`），行内公式依靠 SVG 自带的 `vertical-align` 与正文基线精确对齐，尺寸用 ex 单位、随正文字号缩放。发草稿时（服务端可能清洗 `<svg>`）公式会自动转为高清 PNG 并上传到微信图床。
 
 ## Frontmatter
 
@@ -141,8 +143,8 @@ cover: assets/cover.png # 库内图片路径或 https 图片链接
 | `[[双链]]` | 降级为纯文本 |
 | Callout | 按引用块样式处理，并强化标题行 |
 | 任务列表 | 复选框会转换为文本符号 |
-| 行内公式 `$...$` | 使用 KaTeX 渲染 |
-| 块级公式 `$$...$$` | 使用 KaTeX 渲染 |
+| 行内公式 `$...$` | 使用 MathJax 渲染为矢量 SVG |
+| 块级公式 `$$...$$` | 使用 MathJax 渲染为矢量 SVG，居中显示 |
 
 ## 图片处理
 
@@ -206,7 +208,7 @@ obsidian-marknice/
 - TypeScript
 - esbuild
 - marked
-- KaTeX
+- MathJax
 - html-docx-js
 - JSZip
 
@@ -219,7 +221,7 @@ obsidian-marknice/
 
 ## English Summary
 
-MarkNice WeChat is an Obsidian plugin for converting Markdown notes into WeChat Official Account articles. It provides themed formatting, live preview, rich-text copy, PDF OCR import through PaddleOCR, direct draft publishing through the WeChat API, Word import/export, KaTeX math rendering, and compatibility handling for common Obsidian syntax.
+MarkNice WeChat is an Obsidian plugin for converting Markdown notes into WeChat Official Account articles. It provides themed formatting, live preview, rich-text copy, PDF OCR import through PaddleOCR, direct draft publishing through the WeChat API, Word import/export, MathJax vector-SVG math rendering, and compatibility handling for common Obsidian syntax.
 
 Manual install: copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/marknice-wechat/`, then enable the plugin in Obsidian.
 
@@ -241,7 +243,7 @@ MarkNice WeChat is an Obsidian plugin that converts Markdown notes into WeChat O
 - Font-size and paragraph-spacing tuning
 - Rich-text copy with inline styles
 - Direct publishing to the WeChat draft box
-- KaTeX-powered inline and block math
+- MathJax-powered inline and block math (vector SVG)
 - Word `.docx` import and export
 - PDF OCR import to Markdown through a configurable PaddleOCR jobs endpoint
 - Obsidian syntax support, including image embeds, wikilinks, highlights, callouts, task lists, tables, and code blocks

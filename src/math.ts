@@ -1,5 +1,11 @@
-import katex from 'katex';
 import { Marked, type TokenizerThis, type Tokens } from 'marked';
+import { mathjax } from 'mathjax-full/js/mathjax';
+import { TeX } from 'mathjax-full/js/input/tex';
+import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages';
+import { SVG } from 'mathjax-full/js/output/svg';
+import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor';
+import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html';
+import type { LiteElement } from 'mathjax-full/js/adaptors/lite/Element';
 
 type MathToken = Tokens.Generic & {
   tex: string;
@@ -151,20 +157,117 @@ function setChildrenFromHtml(el: Element, html: string): void {
   el.replaceChildren(fragment);
 }
 
+/* ------------------------------------------------------------------ */
+/* 公式渲染：与 MdNice 相同的方案 —— MathJax tex-svg 输出纯矢量 SVG。     */
+/* 输出的 SVG 全部是 <path>/<rect>，不依赖任何 CSS 定位属性，            */
+/* 因此天然免疫微信编辑器粘贴时对 position/top 的过滤与对标签的清洗；      */
+/* fontCache:'none' 保证每个 SVG 自包含全部字形路径。                     */
+/* ------------------------------------------------------------------ */
+
+const mathAdaptor = liteAdaptor();
+RegisterHTMLHandler(mathAdaptor);
+const mathDocument = mathjax.document('', {
+  InputJax: new TeX({ packages: AllPackages }),
+  OutputJax: new SVG({ fontCache: 'none' }),
+});
+
+/** 把 LaTeX 渲染为自包含的 SVG 字符串（MathJax mjx-container 的唯一子节点） */
 export function renderMathToHtml(tex: string, displayMode: boolean): string {
-  return katex.renderToString(tex, {
-    displayMode,
-    throwOnError: false,
-    strict: 'ignore',
-    output: 'mathml',
+  const node = mathDocument.convert(tex, { display: displayMode });
+  const svg = (mathAdaptor.childNodes(node) as LiteElement[]).find(
+    (child) => mathAdaptor.kind(child) === 'svg'
+  );
+  if (!svg) throw new Error('MathJax 未产出 SVG');
+  return mathAdaptor.outerHTML(svg);
+}
+
+/**
+ * 微信友好的 SVG 后处理（对齐 MdNice 的做法）：
+ * - width/height 从属性搬进内联 style（ex 单位，随正文字号缩放），粘贴后才可靠；
+ * - 保留 MathJax 生成的内联 vertical-align，行内公式精确对齐正文基线；
+ * - 块级公式允许超出版心时横向滑动而不是被压缩变形。
+ */
+function polishMathSvg(el: Element, displayMode: boolean): void {
+  const svg = el.querySelector('svg');
+  if (!svg) return;
+  const width = svg.getAttribute('width');
+  const height = svg.getAttribute('height');
+  if (width) svg.style.width = width;
+  if (height) svg.style.height = height;
+  svg.removeAttribute('width');
+  svg.removeAttribute('height');
+  if (displayMode) {
+    svg.style.setProperty('max-width', '300%', 'important');
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 草稿接口备用路径：add_draft 的服务端内容清洗可能剥掉 <svg>，          */
+/* 发草稿时把公式栅格化为 PNG 图片（会被统一上传到微信图床）。            */
+/* ------------------------------------------------------------------ */
+
+/** 栅格化放大倍数，保证手机高清屏下公式不糊 */
+const MATH_RASTER_SCALE = 6;
+
+/** 画布单边像素上限，防止超长公式撑爆内存 */
+const MATH_RASTER_MAX_SIDE = 4096;
+
+/** 1ex 的估算像素（约为 16px 字号的 0.5em），只影响栅格分辨率，不影响显示尺寸 */
+const EX_IN_PX = 8;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('公式离屏渲染失败'));
+    img.src = src;
   });
+}
+
+/** 把公式容器里的 SVG 栅格化为 PNG <img>（尺寸沿用 ex，随正文字号缩放） */
+async function rasterizeMathFormula(el: Element): Promise<void> {
+  const svg = el.querySelector('svg');
+  if (!svg) return;
+  const widthEx = parseFloat(svg.style.width || svg.getAttribute('width') || '');
+  const heightEx = parseFloat(svg.style.height || svg.getAttribute('height') || '');
+  if (!Number.isFinite(widthEx) || !Number.isFinite(heightEx) || widthEx <= 0 || heightEx <= 0) return;
+
+  // 独立栅格化时没有父级上下文，把 currentColor 固化为公式容器的文本颜色
+  const clone = svg.cloneNode(true) as SVGElement;
+  clone.style.setProperty('color', (el as HTMLElement).style.color || '#333333');
+  clone.setAttribute('width', String(Math.round(widthEx * EX_IN_PX)));
+  clone.setAttribute('height', String(Math.round(heightEx * EX_IN_PX)));
+
+  const svgText = new XMLSerializer().serializeToString(clone);
+  const bitmap = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`);
+
+  const scale = Math.min(
+    MATH_RASTER_SCALE,
+    MATH_RASTER_MAX_SIDE / (widthEx * EX_IN_PX),
+    MATH_RASTER_MAX_SIDE / (heightEx * EX_IN_PX)
+  );
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(widthEx * EX_IN_PX * scale));
+  canvas.height = Math.max(1, Math.round(heightEx * EX_IN_PX * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  const imgEl = el.ownerDocument.createElement('img');
+  imgEl.setAttribute('src', canvas.toDataURL('image/png'));
+  imgEl.setAttribute('alt', el.getAttribute('data-tex') ?? '');
+  imgEl.setAttribute(
+    'style',
+    `width:${widthEx}ex;height:${heightEx}ex;vertical-align:${svg.style.verticalAlign || 'baseline'};`
+  );
+  el.replaceChildren(imgEl);
 }
 
 /**
  * 把 LaTeX 源码转换为线性可读纯文本，用于 Word 导出。
  *
  * Word 经 altChunk(MHT) 路径渲染时，既不支持 MathML，
- * 也不支持 KaTeX 的 CSS 定位排版（分数/根号/上下标会错位或丢失），
+ * 也不支持 SVG/ CSS 定位排版（分数/根号/上下标会错位或丢失），
  * 且 mathml 输出里的 <annotation> 还会让每个公式重复一遍。
  *
  * 因此 Word 导出时把公式降级为线性文本：信息完整、任何 Word 版本都不会出错。
@@ -414,7 +517,7 @@ export function texToLinearText(tex: string): string {
 /**
  * Word 导出预处理：把公式元素降级为线性可读纯文本。
  *
- * Word 的 altChunk(HTML) 渲染既不支持 MathML，也不支持 KaTeX 的 CSS 定位，
+ * Word 的 altChunk(HTML) 渲染既不支持 MathML，也不支持 SVG 公式，
  * 故这里从 data-tex 还原 LaTeX 并转成线性文本，保证信息正确且不重复。
  */
 export function rewriteMathForWord(container: ParentNode): void {
@@ -427,32 +530,32 @@ export function rewriteMathForWord(container: ParentNode): void {
   container.querySelectorAll('.math-inline').forEach(rewrite);
 }
 
-export function renderMathInElement(container: ParentNode): void {
-  container.querySelectorAll('.math-block').forEach((el) => {
-    const tex = getMathTex(el, /^\\\[/, /\\\]$/);
+/**
+ * 把容器中的公式渲染为 MathJax SVG（纯矢量，随字号缩放、基线精确）。
+ * asImage 为 true 时（发公众号草稿）进一步栅格化为 PNG，
+ * 规避草稿接口服务端对 <svg> 的清洗。
+ */
+export async function renderMathInElement(container: ParentNode, asImage = false): Promise<void> {
+  const render = async (el: Element, displayMode: boolean, open: string, close: string): Promise<void> => {
+    const tex = getMathTex(el, displayMode ? /^\\\[/ : /^\\\(/, displayMode ? /\\\]$/ : /\\\)$/);
     if (!tex) return;
     if (tex.length > MAX_RENDER_TEX_LENGTH) {
-      el.textContent = `\\[${tex}\\]`;
+      el.textContent = `${open}${tex}${close}`;
       return;
     }
     try {
-      setChildrenFromHtml(el, renderMathToHtml(tex, true));
+      setChildrenFromHtml(el, renderMathToHtml(tex, displayMode));
+      polishMathSvg(el, displayMode);
+      if (asImage) await rasterizeMathFormula(el);
     } catch {
-      el.textContent = `\\[${tex}\\]`;
+      el.textContent = `${open}${tex}${close}`;
     }
-  });
+  };
 
-  container.querySelectorAll('.math-inline').forEach((el) => {
-    const tex = getMathTex(el, /^\\\(/, /\\\)$/);
-    if (!tex) return;
-    if (tex.length > MAX_RENDER_TEX_LENGTH) {
-      el.textContent = `\\(${tex}\\)`;
-      return;
-    }
-    try {
-      setChildrenFromHtml(el, renderMathToHtml(tex, false));
-    } catch {
-      el.textContent = `\\(${tex}\\)`;
-    }
-  });
+  for (const el of Array.from(container.querySelectorAll('.math-block'))) {
+    await render(el, true, '\\[', '\\]');
+  }
+  for (const el of Array.from(container.querySelectorAll('.math-inline'))) {
+    await render(el, false, '\\(', '\\)');
+  }
 }

@@ -180,12 +180,13 @@ export default class MarkNicePlugin extends Plugin {
     return file && file.extension === 'md' ? file : null;
   }
 
-  async convert(file: TFile): Promise<ConvertResult> {
+  async convert(file: TFile, opts?: { mathAsImage?: boolean }): Promise<ConvertResult> {
     return convertFileToWechat(this.app, file, {
       theme: this.getCurrentTheme(),
       includeTitleInBody: this.settings.includeTitleInBody,
       fontSizeOffset: this.settings.fontSizeOffset,
       paraSpacingOffset: this.settings.paraSpacingOffset,
+      mathAsImage: opts?.mathAsImage,
     });
   }
 
@@ -234,7 +235,8 @@ export default class MarkNicePlugin extends Plugin {
       return;
     }
     try {
-      const result = await this.convert(file);
+      // 草稿接口的服务端清洗可能剥掉 <svg>，公式走 PNG 图片更稳
+      const result = await this.convert(file, { mathAsImage: true });
       new PublishModal(this.app, this, file, result).open();
     } catch (err) {
       console.error('[MarkNice WeChat] convert failed', err);
