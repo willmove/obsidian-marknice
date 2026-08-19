@@ -50964,7 +50964,7 @@ var MarkNicePlugin = class extends import_obsidian7.Plugin {
       return;
     }
     try {
-      const result = await this.convert(file, { mathAsImage: true });
+      const result = await this.convert(file);
       new PublishModal(this.app, this, file, result).open();
     } catch (err2) {
       console.error("[MarkNice WeChat] convert failed", err2);

@@ -105,7 +105,7 @@ PDF OCR 使用前需要在「设置 -> MarkNice WeChat -> PDF OCR」中填写 Pa
 
 关于公式导出：Word 的 HTML 导入链路无法稳定还原公式排版，因此导出 Word 时公式会转换为线性可读文本，例如 `\frac{a+b}{c+d}` 会转换为 `(a+b)/(c+d)`。公众号预览与复制使用 MathJax 渲染的矢量 SVG 公式。
 
-关于公众号公式：公众号编辑器不支持 MathML，粘贴时还会过滤 `position`/`top` 等 CSS 定位属性，KaTeX 这类 span+CSS 排版必然散架。插件采用与 MdNice 相同的方案：用 MathJax 把公式渲染为**纯矢量 SVG**（全部是 path/rect，不依赖 CSS 定位，天然免疫微信的样式过滤），公式颜色跟随正文（`currentColor`），行内公式依靠 SVG 自带的 `vertical-align` 与正文基线精确对齐，尺寸用 ex 单位、随正文字号缩放。发草稿时（服务端可能清洗 `<svg>`）公式会自动转为高清 PNG 并上传到微信图床。
+关于公众号公式：公众号编辑器不支持 MathML，粘贴时还会过滤 `position`/`top` 等 CSS 定位属性，KaTeX 这类 span+CSS 排版必然散架。插件采用与 MdNice 相同的方案：用 MathJax 把公式渲染为**纯矢量 SVG**（全部是 path/rect，不依赖 CSS 定位，天然免疫微信的样式过滤），公式颜色跟随正文（`currentColor`），行内公式依靠 SVG 自带的 `vertical-align` 与正文基线精确对齐，尺寸用 ex 单位、随正文字号缩放。若个别通道（如草稿接口的服务端清洗）剥掉 `<svg>`，插件也支持把公式转为高清 PNG 兜底。
 
 ## Frontmatter
 

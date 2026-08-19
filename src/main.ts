@@ -235,8 +235,7 @@ export default class MarkNicePlugin extends Plugin {
       return;
     }
     try {
-      // 草稿接口的服务端清洗可能剥掉 <svg>，公式走 PNG 图片更稳
-      const result = await this.convert(file, { mathAsImage: true });
+      const result = await this.convert(file);
       new PublishModal(this.app, this, file, result).open();
     } catch (err) {
       console.error('[MarkNice WeChat] convert failed', err);
