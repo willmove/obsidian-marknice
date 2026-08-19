@@ -2,7 +2,7 @@
 
 MarkNice WeChat 是一个 Obsidian 微信公众号排版插件。它可以把当前 Markdown 笔记转换为适合微信公众号编辑器的内联样式 HTML，并提供实时预览、一键复制、Markdown 复制、PDF OCR 导入、HTML/Word/PDF 导出、直接发送到公众号草稿箱等能力。
 
-- 当前版本：`0.6.6`
+- 当前版本：`0.6.13`
 - 最低 Obsidian 版本：`1.5.0`
 
 ## 功能特性
