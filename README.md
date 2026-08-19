@@ -199,6 +199,8 @@ obsidian-marknice/
     ├── paddle-ocr.ts      # PaddleOCR PDF 识别客户端
     ├── docx-parser.ts     # .docx 解析
     ├── html-to-markdown.ts # HTML 到 Markdown 转换
+    ├── markdown-cleanup.ts # 导入内容的 Markdown 清理与公式规范化
+    ├── zip-utils.ts       # 基于 fflate 的 zip 打包工具
     └── vendor.d.ts        # 第三方库类型声明
 ```
 
@@ -208,9 +210,8 @@ obsidian-marknice/
 - TypeScript
 - esbuild
 - marked
-- MathJax
-- html-docx-js
-- JSZip
+- MathJax（mathjax-full）
+- fflate
 
 ## 已知限制
 
@@ -239,7 +240,7 @@ MarkNice WeChat is an Obsidian plugin that converts Markdown notes into WeChat O
 
 - Live WeChat-style preview inside Obsidian
 - Phone and desktop preview modes
-- 16 built-in themes
+- 14 built-in themes
 - Font-size and paragraph-spacing tuning
 - Rich-text copy with inline styles
 - Direct publishing to the WeChat draft box
