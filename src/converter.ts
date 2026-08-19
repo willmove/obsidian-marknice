@@ -284,14 +284,38 @@ function amberHeadingHtml(
   )}</${tagName}></div>`;
 }
 
-function applyAmberOrderedListMarkers(body: HTMLElement): void {
+/**
+ * 估算 ol 内最大序号（尊重 start 与 li[value] 的 HTML 编号规则），
+ * 用于按位数给原生序号预留 padding。
+ */
+function olMaxNumber(ol: Element): number {
+  const startAttr = Number.parseInt(ol.getAttribute('start') ?? '', 10);
+  let num = Number.isNaN(startAttr) ? 1 : startAttr;
+  let max = num;
+  ol.querySelectorAll(':scope > li').forEach((li) => {
+    const valueAttr = Number.parseInt(li.getAttribute('value') ?? '', 10);
+    num = Number.isNaN(valueAttr) ? num + 1 : valueAttr;
+    if (num > max) max = num;
+  });
+  return max;
+}
+
+/**
+ * 琥珀橙主题的设计用「1、2、」式序号：序号写成显式文本并关闭原生标记
+ * （ol 为 list-style:none）。start/value 属性折算进文本序号后移除，
+ * 避免原生标记重新启用时出现双重编号。其余主题走原生序号，不经过此处。
+ */
+function applyOrderedListMarkers(body: HTMLElement, markerHtml: (num: number) => string): void {
   body.querySelectorAll('ol').forEach((ol) => {
+    const startAttr = Number.parseInt(ol.getAttribute('start') ?? '', 10);
+    const start = Number.isNaN(startAttr) ? 1 : startAttr;
     ol.querySelectorAll(':scope > li').forEach((li, index) => {
-      li.insertBefore(
-        htmlToNodes(`<span style="color:#c8722a;font-weight:700;">${index + 1}、</span>`),
-        li.firstChild
-      );
+      const valueAttr = Number.parseInt(li.getAttribute('value') ?? '', 10);
+      const num = Number.isNaN(valueAttr) ? start + index : valueAttr;
+      li.insertBefore(htmlToNodes(markerHtml(num)), li.firstChild);
+      li.removeAttribute('value');
     });
+    ol.removeAttribute('start');
   });
 }
 
@@ -367,7 +391,7 @@ function ribbonHeadingHtml(
  * 把 marked 输出的通用 HTML 转成微信编辑器安全的内联样式 HTML。
  * 公众号编辑器会丢弃 <style> 与 class，因此所有视觉信息必须落在 style 属性上。
  */
-function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0, spacingOffset = 0): void {
+export function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0, spacingOffset = 0): void {
   const strongColor = theme.strong ?? theme.heading;
   const codeText = theme.codeText ?? theme.text;
   const st = (css: string): string => scaleStyle(css, fontOffset, spacingOffset);
@@ -535,7 +559,25 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
         )
       );
     } else {
-      setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
+      // 原生序号（list-style-position: outside）画在 ol 的 padding 区域内。
+      // 缩进只能用 padding-left 预留、不能用 margin-left：margin 把序号挤出
+      // 盒子左缘，公众号渲染器会裁掉溢出部分（"12." 被截成 "2."）。
+      // 与 mdnice 的 padding-left:25px 同思路，但按最大序号位数动态计算，
+      // 三位数列表也不会截（mdnice 固定 25px 时 100 起会截）。
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'ol') {
+        const digits = String(olMaxNumber(el)).length;
+        // 1 位数维持原有 1.2em 缩进；多位数按 0.62em/位 + 0.85em 余量预留
+        const pad = digits === 1 ? 1.2 : 0.62 * digits + 0.85;
+        setStyle(
+          el,
+          st(
+            `margin:14px 0;padding-left:${pad.toFixed(2)}em;color:${theme.text};line-height:1.9;list-style-type:decimal;`
+          )
+        );
+      } else {
+        setStyle(el, st(`margin:14px 0;padding-left:1.2em;color:${theme.text};line-height:1.9;list-style-type:disc;`));
+      }
     }
   });
   body.querySelectorAll('li').forEach((el) => {
@@ -550,7 +592,9 @@ function applyThemeStyles(body: HTMLElement, theme: WechatTheme, fontOffset = 0,
     normalizeSoftWraps(el);
     setStyle(el, isAmber ? st('margin:10px 0;') : st(`margin:6px 0;font-size:15px;`));
   });
-  if (isAmber) applyAmberOrderedListMarkers(body);
+  if (isAmber) {
+    applyOrderedListMarkers(body, (num) => `<span style="color:#c8722a;font-weight:700;">${num}、</span>`);
+  }
 
   body.querySelectorAll('pre').forEach((el) => {
     const code = (el.textContent ?? '').replace(/\n+$/, '');

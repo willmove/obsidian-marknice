@@ -9,3 +9,6 @@ node_modules/
 
 # local publishing notes
 docs/公众号发布介绍.md
+
+# test bundle output
+scripts/.converter-tests.bundle.cjs

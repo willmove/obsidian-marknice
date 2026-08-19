@@ -46631,14 +46631,32 @@ function amberHeadingHtml(tagName, text, fontOffset, spacingOffset, marginOverri
     text
   )}</${tagName}></div>`;
 }
-function applyAmberOrderedListMarkers(body) {
+function olMaxNumber(ol) {
+  var _a2;
+  const startAttr = Number.parseInt((_a2 = ol.getAttribute("start")) != null ? _a2 : "", 10);
+  let num = Number.isNaN(startAttr) ? 1 : startAttr;
+  let max2 = num;
+  ol.querySelectorAll(":scope > li").forEach((li) => {
+    var _a3;
+    const valueAttr = Number.parseInt((_a3 = li.getAttribute("value")) != null ? _a3 : "", 10);
+    num = Number.isNaN(valueAttr) ? num + 1 : valueAttr;
+    if (num > max2) max2 = num;
+  });
+  return max2;
+}
+function applyOrderedListMarkers(body, markerHtml) {
   body.querySelectorAll("ol").forEach((ol) => {
+    var _a2;
+    const startAttr = Number.parseInt((_a2 = ol.getAttribute("start")) != null ? _a2 : "", 10);
+    const start = Number.isNaN(startAttr) ? 1 : startAttr;
     ol.querySelectorAll(":scope > li").forEach((li, index) => {
-      li.insertBefore(
-        htmlToNodes(`<span style="color:#c8722a;font-weight:700;">${index + 1}\u3001</span>`),
-        li.firstChild
-      );
+      var _a3;
+      const valueAttr = Number.parseInt((_a3 = li.getAttribute("value")) != null ? _a3 : "", 10);
+      const num = Number.isNaN(valueAttr) ? start + index : valueAttr;
+      li.insertBefore(htmlToNodes(markerHtml(num)), li.firstChild);
+      li.removeAttribute("value");
     });
+    ol.removeAttribute("start");
   });
 }
 function headingStyle(theme, fontOffset, spacingOffset, opts) {
@@ -46816,7 +46834,19 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
         )
       );
     } else {
-      setStyle(el, st(`margin:14px 0 14px 1.2em;padding:0;color:${theme.text};line-height:1.9;`));
+      const tag2 = el.tagName.toLowerCase();
+      if (tag2 === "ol") {
+        const digits = String(olMaxNumber(el)).length;
+        const pad = digits === 1 ? 1.2 : 0.62 * digits + 0.85;
+        setStyle(
+          el,
+          st(
+            `margin:14px 0;padding-left:${pad.toFixed(2)}em;color:${theme.text};line-height:1.9;list-style-type:decimal;`
+          )
+        );
+      } else {
+        setStyle(el, st(`margin:14px 0;padding-left:1.2em;color:${theme.text};line-height:1.9;list-style-type:disc;`));
+      }
     }
   });
   body.querySelectorAll("li").forEach((el) => {
@@ -46832,7 +46862,9 @@ function applyThemeStyles(body, theme, fontOffset = 0, spacingOffset = 0) {
     normalizeSoftWraps(el);
     setStyle(el, isAmber ? st("margin:10px 0;") : st(`margin:6px 0;font-size:15px;`));
   });
-  if (isAmber) applyAmberOrderedListMarkers(body);
+  if (isAmber) {
+    applyOrderedListMarkers(body, (num) => `<span style="color:#c8722a;font-weight:700;">${num}\u3001</span>`);
+  }
   body.querySelectorAll("pre").forEach((el) => {
     var _a3;
     const code = ((_a3 = el.textContent) != null ? _a3 : "").replace(/\n+$/, "");
