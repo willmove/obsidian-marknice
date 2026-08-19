@@ -112,6 +112,22 @@ export const THEMES: Record<string, WechatTheme> = {
     hr: "#eaecef",
     markBg: "#dcedff",
   },
+  tech: {
+    id: "tech",
+    label: "科技蓝",
+    bodyFont:
+      "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#1f2d3d",
+    heading: "#0b3b8b",
+    accent: "#1456c5",
+    strong: "#1456c5",
+    quoteBg: "#f5f8ff",
+    quoteBorder: "#5b8dff",
+    codeBg: "#eef4ff",
+    codeText: "#174ea6",
+    hr: "#dce6ff",
+    markBg: "#dce9ff",
+  },
   elegant: {
     id: "elegant",
     label: "优雅棕",

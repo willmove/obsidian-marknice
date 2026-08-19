@@ -47111,6 +47111,21 @@ var THEMES = {
     hr: "#eaecef",
     markBg: "#dcedff"
   },
+  tech: {
+    id: "tech",
+    label: "\u79D1\u6280\u84DD",
+    bodyFont: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif",
+    text: "#1f2d3d",
+    heading: "#0b3b8b",
+    accent: "#1456c5",
+    strong: "#1456c5",
+    quoteBg: "#f5f8ff",
+    quoteBorder: "#5b8dff",
+    codeBg: "#eef4ff",
+    codeText: "#174ea6",
+    hr: "#dce6ff",
+    markBg: "#dce9ff"
+  },
   elegant: {
     id: "elegant",
     label: "\u4F18\u96C5\u68D5",
@@ -50883,10 +50898,6 @@ var MarkNicePlugin = class extends import_obsidian7.Plugin {
     let migrated = false;
     if (this.settings.defaultTheme === "default") {
       this.settings.defaultTheme = "simple";
-      migrated = true;
-    }
-    if (this.settings.defaultTheme === "tech") {
-      this.settings.defaultTheme = "night";
       migrated = true;
     }
     if (this.settings.defaultTheme === "edu") {

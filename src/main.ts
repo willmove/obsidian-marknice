@@ -150,10 +150,8 @@ export default class MarkNicePlugin extends Plugin {
       this.settings.defaultTheme = 'simple';
       migrated = true;
     }
-    if (this.settings.defaultTheme === 'tech') {
-      this.settings.defaultTheme = 'night';
-      migrated = true;
-    }
+    // 'tech' 曾是“极客深色”的旧 ID 并迁移到 'night'；
+    // 现 'tech' 复用为“科技蓝”主题，迁移必须移除，否则选择会被改写
     if (this.settings.defaultTheme === 'edu') {
       this.settings.defaultTheme = 'green';
       migrated = true;
